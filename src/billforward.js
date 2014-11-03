@@ -16,7 +16,7 @@
 
     bfjs.grabScripts = function() {
         var queue = [];
-        if (jQuery) {
+        if (typeof jQuery !== 'undefined') {
             bfjs.core.loadedCallback();
         } else {
             // everyone has this in their cache anyway, so..
@@ -136,35 +136,33 @@
     };
 
     bfjs.core.do = function() {
-        var formElement = bfjs.core.formElementCandidate;
-        if (formElement instanceof jQuery) {
-            console.log(formElement.length);
-            formElement = formElement.get(0);
-        }
-        if (!(formElement instanceof HTMLElement)) {
-            throw "Expected jQuery object or HTML element. Perhaps the Form or JQuery haven't finished loading?";
-        }
+        var $formElement = $(bfjs.core.formElementCandidate);
+        var formElement = $formElement.get(0);
 
-        // Disable the submit button to prevent repeated clicks
-        $(formElement).find('button').prop('disabled', true);
+        if (!(formElement instanceof HTMLElement)) {
+            throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
+        }
 
         bfjs.state.formElement = formElement;
 
-        if (bfjs.stripe.needed) {
-            bfjs.stripe.deferRequest();
-        }
+        jQuery(function($) {
+            $formElement.submit(function(e) {
+                // Disable the submit button to prevent repeated clicks
+                $(this).find('button').prop('disabled', true);
+
+                e.preventDefault();
+                e.stopPropagation();
+                if (bfjs.stripe.needed) {
+                    bfjs.stripe.deferRequest();
+                }
+            });
+        });
     };
 
-    bfjs.addPaymentMethodToAccount = function(formElement, accountID) {
-        bfjs.core.formElementCandidate = formElement;
+    bfjs.capturePaymentMethod = function(formElementSelector, accountID) {
+        bfjs.core.formElementCandidate = formElementSelector;
         bfjs.state.accountID = accountID;
-        // do async so we can return false irrespective of whether this errors
-        setTimeout(function() {
-            bfjs.core.deferRequest();
-        }, 0);
-
-        // prevent default action
-        return false;
+        bfjs.core.deferRequest();
     };
 
     bfjs.grabScripts();
