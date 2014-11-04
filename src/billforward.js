@@ -16,7 +16,8 @@
             url: null,
             token: null
         },
-        formElement: null
+        formElement: null,
+        postVars: {}
     };
 
     bfjs.grabScripts = function() {
@@ -118,6 +119,7 @@
         }
 
         bfjs.state.formElement = formElement;
+        bfjs.state.$formElement = $formElement;
 
         jQuery(function($) {
             $formElement.submit(function(e) {
@@ -134,33 +136,15 @@
     };
 
     bfjs.stripe.responseHandler = function(status, response) {
-        var $form = $(bfjs.state.formElement);
-
         if (response.error) {
             // Show the errors on the form
-            $form.find('.payment-errors').text(response.error.message);
-            $form.find('button').prop('disabled', false);
+            bfjs.ultimateFailure(response.error.message);
         } else {
-            function addPostVariable(varName, value) {
-                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
-            }
-
             // token contains id, last4, and card type
             var token = response.id;
             var card = response.card;
 
-            // Insert the Stripe token into the form so it gets submitted to the server
-            addPostVariable('stripeToken', token);
-            addPostVariable('cardId', card.id);
-
-            // send BillForward values
-            /*addPostVariable('quantity1', quantity1);
-            addPostVariable('quantity2', quantity2);
-            addPostVariable('ratePlanID', ratePlanID);
-            addPostVariable('accountID', accountID);
-
             // and re-submit
-            $form.get(0).submit();*/
             var xmlhttp = new XMLHttpRequest();
             var controller = "vaulted-gateways/"
             var endpoint = "auth-capture";
@@ -183,22 +167,50 @@
         }
     };
 
+    bfjs.ultimateSuccess = function(data) {
+        console.log(data);
+
+        var $formElement = bfjs.state.$formElement;
+        var formElement = bfjs.state.formElement;
+
+        var addPostVariable = function(varName, value) {
+            $formElement.append($('<input type="hidden" name="'+varName+'" />').val(value));
+        }
+
+        for (var i in bfjs.state.postVars) {
+            addPostVariable(i, bfjs.state.postVars[i]);
+        }
+
+        formElement.submit();
+    };
+
+    bfjs.ultimateFailure = function(reason) {
+        console.error(data);
+
+        var $formElement = bfjs.state.$formElement;
+        var formElement = bfjs.state.formElement;
+
+        $formElement.find('.payment-errors').text(reason);
+        $formElement.find('button').prop('disabled', false);
+    };
+
     bfjs.authCaptureHandler = function(xmlhttp) {
         if (xmlhttp.readyState == 4) {
             if (xmlhttp.status == 200) {
                 bfjs.authCaptureSuccessHandler(xmlhttp.responseText);
             } else {
-                bfjs.authCaptureSuccessHandler(xmlhttp.responseText);
+                bfjs.authCaptureFailHandler(xmlhttp.responseText);
             }
         }
     };
 
     bfjs.authCaptureSuccessHandler = function(data) {
-        console.log(data);
+        bfjs.ultimateSuccess(data);
     };
 
-    bfjs.authCaptureFailHandler = function(data) {
-        console.log(data);
+    bfjs.authCaptureFailHandler = function(reason) {
+        // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+        bfjs.ultimateFailure(reason);
     };
 
     bfjs.capturePaymentMethod = function(formElementSelector, accountID) {
@@ -217,7 +229,11 @@
         bfjs.core.instantiated = true;
     };
 
+    bfjs.usePOSTVars = function(payload) {
+        bfjs.state.postVars = payload;
+    };
+
     bfjs.grabScripts();
 
-    window.bfjs = window.bfjs || bfjs;
+    window.BillForward = window.BillForward || bfjs;
 }());
