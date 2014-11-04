@@ -167,8 +167,8 @@
         }
     };
 
-    bfjs.ultimateSuccess = function(data) {
-        console.log(data);
+    bfjs.ultimateSuccess = function(paymentMethod) {
+        //console.log(paymentMethod);
 
         var $formElement = bfjs.state.$formElement;
         var formElement = bfjs.state.formElement;
@@ -180,12 +180,13 @@
         for (var i in bfjs.state.postVars) {
             addPostVariable(i, bfjs.state.postVars[i]);
         }
+        addPostVariable('accountID', paymentMethod.accountID);
 
         formElement.submit();
     };
 
     bfjs.ultimateFailure = function(reason) {
-        console.error(data);
+        console.error(reason);
 
         var $formElement = bfjs.state.$formElement;
         var formElement = bfjs.state.formElement;
@@ -205,7 +206,14 @@
     };
 
     bfjs.authCaptureSuccessHandler = function(data) {
-        bfjs.ultimateSuccess(data);
+        //console.log(data);
+        try {
+            decoded = JSON.parse(data);
+            paymentMethod = decoded.results[0];
+            bfjs.ultimateSuccess(paymentMethod);
+        } catch(e) {
+            bfjs.ultimateFailure(e.message);
+        }
     };
 
     bfjs.authCaptureFailHandler = function(reason) {
