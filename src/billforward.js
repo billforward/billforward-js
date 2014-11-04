@@ -3,6 +3,7 @@
     // core is mainly to check if jquery is loaded
     bfjs.core = {
         loaded:false,
+        instantiated:false,
         deferredRequest:null
     };
     bfjs.stripe = {
@@ -11,6 +12,10 @@
         deferredRequest:null
     };
     bfjs.state = {
+        api: {
+            url: null,
+            token: null
+        },
         formElement: null
     };
 
@@ -104,37 +109,6 @@
         Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
     };
 
-    bfjs.stripe.responseHandler = function(status, response) {
-        var $form = $(bfjs.state.formElement);
-
-        if (response.error) {
-            // Show the errors on the form
-            $form.find('.payment-errors').text(response.error.message);
-            $form.find('button').prop('disabled', false);
-        } else {
-            function addPostVariable(varName, value) {
-                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
-            }
-
-            // token contains id, last4, and card type
-            var token = response.id;
-            var card = response.card;
-
-            // Insert the Stripe token into the form so it gets submitted to the server
-            addPostVariable('stripeToken', token);
-            addPostVariable('cardId', card.id);
-
-            // send BillForward values
-            addPostVariable('quantity1', quantity1);
-            addPostVariable('quantity2', quantity2);
-            addPostVariable('ratePlanID', ratePlanID);
-            addPostVariable('accountID', accountID);
-
-            // and re-submit
-            $form.get(0).submit();
-        }
-    };
-
     bfjs.core.do = function() {
         var $formElement = $(bfjs.core.formElementCandidate);
         var formElement = $formElement.get(0);
@@ -159,10 +133,88 @@
         });
     };
 
+    bfjs.stripe.responseHandler = function(status, response) {
+        var $form = $(bfjs.state.formElement);
+
+        if (response.error) {
+            // Show the errors on the form
+            $form.find('.payment-errors').text(response.error.message);
+            $form.find('button').prop('disabled', false);
+        } else {
+            function addPostVariable(varName, value) {
+                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
+            }
+
+            // token contains id, last4, and card type
+            var token = response.id;
+            var card = response.card;
+
+            // Insert the Stripe token into the form so it gets submitted to the server
+            addPostVariable('stripeToken', token);
+            addPostVariable('cardId', card.id);
+
+            // send BillForward values
+            /*addPostVariable('quantity1', quantity1);
+            addPostVariable('quantity2', quantity2);
+            addPostVariable('ratePlanID', ratePlanID);
+            addPostVariable('accountID', accountID);
+
+            // and re-submit
+            $form.get(0).submit();*/
+            var xmlhttp = new XMLHttpRequest();
+            var controller = "vaulted-gateways/"
+            var endpoint = "auth-capture";
+            var fullURL = bfjs.state.api.url + controller + endpoint;
+            var auth = bfjs.state.api.token;
+
+            xmlhttp.open("POST",fullURL,true);
+            xmlhttp.setRequestHeader('Content-Type', 'application/json');
+            xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
+
+            xmlhttp.onreadystatechange = function() {
+                bfjs.authCaptureHandler(xmlhttp);
+            };
+
+            var payload = {
+                stripeToken: token,
+                cardID: card.id
+            };
+            xmlhttp.send(JSON.stringify(payload));
+        }
+    };
+
+    bfjs.authCaptureHandler = function(xmlhttp) {
+        if (xmlhttp.readyState == 4) {
+            if (xmlhttp.status == 200) {
+                bfjs.authCaptureSuccessHandler(xmlhttp.responseText);
+            } else {
+                bfjs.authCaptureSuccessHandler(xmlhttp.responseText);
+            }
+        }
+    };
+
+    bfjs.authCaptureSuccessHandler = function(data) {
+        console.log(data);
+    };
+
+    bfjs.authCaptureFailHandler = function(data) {
+        console.log(data);
+    };
+
     bfjs.capturePaymentMethod = function(formElementSelector, accountID) {
-        bfjs.core.formElementCandidate = formElementSelector;
-        bfjs.state.accountID = accountID;
-        bfjs.core.deferRequest();
+        if (bfjs.core.instantiated) {
+            bfjs.core.formElementCandidate = formElementSelector;
+            bfjs.state.accountID = accountID;
+            bfjs.core.deferRequest();    
+        } else {
+            throw "You need to first call bfjs.useAPI() will BillForward credentials";
+        }
+    };
+
+    bfjs.useAPI = function(url, token) {
+        bfjs.state.api.url = url;
+        bfjs.state.api.token = token;
+        bfjs.core.instantiated = true;
     };
 
     bfjs.grabScripts();
