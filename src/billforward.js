@@ -7,6 +7,7 @@
         deferredRequest:null
     };
     bfjs.stripe = {
+        key: 'stripe',
         loaded:false,
         needed:true,
         deferredRequest:null
@@ -103,11 +104,7 @@
     };
 
     bfjs.stripe.do = function(state) {
-        // This identifies your website in the createToken call below
-        var stripePublishableKey = 'pk_test_7lV2MLoPW0XJ4DXR1Qkatzpz';
-        Stripe.setPublishableKey(stripePublishableKey);
-
-        Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
+        bfjs.doPreAuth({}, bfjs.stripe.key);
     };
 
     bfjs.core.do = function() {
@@ -133,6 +130,9 @@
                 }
             });
         });
+
+        // ready to go
+        $formElement.find('button').prop('disabled', false);
     };
 
     bfjs.stripe.responseHandler = function(status, response) {
@@ -144,27 +144,50 @@
             var token = response.id;
             var card = response.card;
 
-            // and re-submit
-            var xmlhttp = new XMLHttpRequest();
-            var controller = "vaulted-gateways/"
-            var endpoint = "auth-capture";
-            var fullURL = bfjs.state.api.url + controller + endpoint;
-            var auth = bfjs.state.api.token;
-
-            xmlhttp.open("POST",fullURL,true);
-            xmlhttp.setRequestHeader('Content-Type', 'application/json');
-            xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
-
-            xmlhttp.onreadystatechange = function() {
-                bfjs.authCaptureHandler(xmlhttp);
-            };
-
             var payload = {
                 stripeToken: token,
                 cardID: card.id
             };
-            xmlhttp.send(JSON.stringify(payload));
+
+            // and re-submit
+            bfjs.doAuthCapture(payload, bfjs.stripe.key);
         }
+    };
+
+    bfjs.doPreAuth = function(payload, gateway) {
+        var xmlhttp = new XMLHttpRequest();
+        var controller = "vaulted-gateways/"
+        var endpoint = "pre-auth";
+        var fullURL = bfjs.state.api.url + controller + endpoint;
+        var auth = bfjs.state.api.token;
+
+        xmlhttp.open("POST",fullURL,true);
+        xmlhttp.setRequestHeader('Content-Type', 'application/json');
+        xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
+
+        xmlhttp.onreadystatechange = function() {
+            bfjs.preAuthHandler(xmlhttp, gateway);
+        };
+        
+        xmlhttp.send(JSON.stringify(payload));
+    };
+
+    bfjs.doAuthCapture = function(payload, gateway) {
+        var xmlhttp = new XMLHttpRequest();
+        var controller = "vaulted-gateways/"
+        var endpoint = "auth-capture";
+        var fullURL = bfjs.state.api.url + controller + endpoint;
+        var auth = bfjs.state.api.token;
+
+        xmlhttp.open("POST",fullURL,true);
+        xmlhttp.setRequestHeader('Content-Type', 'application/json');
+        xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
+
+        xmlhttp.onreadystatechange = function() {
+            bfjs.authCaptureHandler(xmlhttp, gateway);
+        };
+        
+        xmlhttp.send(JSON.stringify(payload));
     };
 
     bfjs.ultimateSuccess = function(paymentMethod) {
@@ -195,17 +218,50 @@
         $formElement.find('button').prop('disabled', false);
     };
 
-    bfjs.authCaptureHandler = function(xmlhttp) {
+    bfjs.preAuthHandler = function(xmlhttp, gateway) {
         if (xmlhttp.readyState == 4) {
             if (xmlhttp.status == 200) {
-                bfjs.authCaptureSuccessHandler(xmlhttp.responseText);
+                bfjs.preAuthSuccessHandler(xmlhttp.responseText, gateway);
+            } else {
+                bfjs.preAuthFailHandler(xmlhttp.responseText);
+            }
+        }
+    };
+
+    bfjs.authCaptureHandler = function(xmlhttp, gateway) {
+        if (xmlhttp.readyState == 4) {
+            if (xmlhttp.status == 200) {
+                bfjs.authCaptureSuccessHandler(xmlhttp.responseText, gateway);
             } else {
                 bfjs.authCaptureFailHandler(xmlhttp.responseText);
             }
         }
     };
 
-    bfjs.authCaptureSuccessHandler = function(data) {
+    bfjs.stripe.oncePreauthed = function(data) {
+        // This identifies your website in the createToken call below
+        var stripePublishableKey = data.results[0].publicKey;
+        Stripe.setPublishableKey(stripePublishableKey);
+
+        Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
+    };
+
+    bfjs.preAuthSuccessHandler = function(data, gateway) {
+        //console.log(data);
+        try {
+            decoded = JSON.parse(data);
+            bfjs[gateway].oncePreauthed(decoded);
+        } catch(e) {
+            bfjs.ultimateFailure(e.message);
+        }
+    };
+
+    bfjs.preAuthFailHandler = function(reason) {
+        // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+        bfjs.ultimateFailure(reason);
+    };
+
+    bfjs.authCaptureSuccessHandler = function(data, gateway) {
         //console.log(data);
         try {
             decoded = JSON.parse(data);
