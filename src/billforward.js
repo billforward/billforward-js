@@ -18,7 +18,7 @@
             token: null
         },
         formElement: null,
-        postVars: {}
+        callback: null
     };
 
     bfjs.grabScripts = function() {
@@ -108,31 +108,33 @@
     };
 
     bfjs.core.do = function() {
-        var $formElement = $(bfjs.core.formElementCandidate);
-        var formElement = $formElement.get(0);
+        $( document ).ready(function() {
+            var $formElement = $(bfjs.core.formElementCandidate);
+            var formElement = $formElement.get(0);
 
-        if (!(formElement instanceof HTMLElement)) {
-            throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
-        }
+            if (!(formElement instanceof HTMLElement)) {
+                throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
+            }
 
-        bfjs.state.formElement = formElement;
-        bfjs.state.$formElement = $formElement;
+            bfjs.state.formElement = formElement;
+            bfjs.state.$formElement = $formElement;
 
-        jQuery(function($) {
-            $formElement.submit(function(e) {
-                // Disable the submit button to prevent repeated clicks
-                $(this).find('button').prop('disabled', true);
+            jQuery(function($) {
+                $formElement.submit(function(e) {
+                    // Disable the submit button to prevent repeated clicks
+                    $(this).find('button').prop('disabled', true);
 
-                e.preventDefault();
-                e.stopPropagation();
-                if (bfjs.stripe.needed) {
-                    bfjs.stripe.deferRequest();
-                }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (bfjs.stripe.needed) {
+                        bfjs.stripe.deferRequest();
+                    }
+                });
             });
-        });
 
-        // ready to go
-        $formElement.find('button').prop('disabled', false);
+            // ready to go
+            $formElement.find('button').prop('disabled', false);
+        });
     };
 
     bfjs.stripe.responseHandler = function(status, response) {
@@ -192,30 +194,12 @@
 
     bfjs.ultimateSuccess = function(paymentMethod) {
         //console.log(paymentMethod);
-
-        var $formElement = bfjs.state.$formElement;
-        var formElement = bfjs.state.formElement;
-
-        var addPostVariable = function(varName, value) {
-            $formElement.append($('<input type="hidden" name="'+varName+'" />').val(value));
-        }
-
-        for (var i in bfjs.state.postVars) {
-            addPostVariable(i, bfjs.state.postVars[i]);
-        }
-        addPostVariable('accountID', paymentMethod.accountID);
-
-        formElement.submit();
+        bfjs.state.callback(paymentMethod, false);
     };
 
     bfjs.ultimateFailure = function(reason) {
         console.error(reason);
-
-        var $formElement = bfjs.state.$formElement;
-        var formElement = bfjs.state.formElement;
-
-        $formElement.find('.payment-errors').text(reason);
-        $formElement.find('button').prop('disabled', false);
+        bfjs.state.callback(null, reason);
     };
 
     bfjs.preAuthHandler = function(xmlhttp, gateway) {
@@ -237,13 +221,35 @@
             }
         }
     };
+    
+    bfjs.core.getFormValue = function(key) {
+        var $formElement = bfjs.state.$formElement;
+        
+        return $formElement.find("input[bf-data='"+key+"']").val();
+    };
 
     bfjs.stripe.oncePreauthed = function(data) {
+        if (!decoded.results) {
+            bfjs.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
+        }
         // This identifies your website in the createToken call below
         var stripePublishableKey = data.results[0].publicKey;
         Stripe.setPublishableKey(stripePublishableKey);
 
-        Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
+        //Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
+        
+        
+        
+        
+        var tokenInfo = {
+            name: bfjs.core.getFormValue("name"),
+            number: bfjs.core.getFormValue("number"),
+            cvc: bfjs.core.getFormValue("cvc"),
+            exp_month: bfjs.core.getFormValue("exp-month"),
+            exp_year: bfjs.core.getFormValue("exp-year")
+        };
+
+        Stripe.card.createToken(tokenInfo, bfjs.stripe.responseHandler);
     };
 
     bfjs.preAuthSuccessHandler = function(data, gateway) {
@@ -252,7 +258,7 @@
             decoded = JSON.parse(data);
             bfjs[gateway].oncePreauthed(decoded);
         } catch(e) {
-            bfjs.ultimateFailure(e.message);
+            bfjs.ultimateFailure("Preauthorization failed. "+e.message);
         }
     };
 
@@ -277,11 +283,12 @@
         bfjs.ultimateFailure(reason);
     };
 
-    bfjs.capturePaymentMethod = function(formElementSelector, accountID) {
+    bfjs.captureCardOnSubmit = function(formElementSelector, accountID, callback) {
         if (bfjs.core.instantiated) {
             bfjs.core.formElementCandidate = formElementSelector;
             bfjs.state.accountID = accountID;
-            bfjs.core.deferRequest();    
+            bfjs.state.callback = callback;
+            bfjs.core.deferRequest();
         } else {
             throw "You need to first call bfjs.useAPI() will BillForward credentials";
         }
@@ -291,10 +298,6 @@
         bfjs.state.api.url = url;
         bfjs.state.api.token = token;
         bfjs.core.instantiated = true;
-    };
-
-    bfjs.usePOSTVars = function(payload) {
-        bfjs.state.postVars = payload;
     };
 
     bfjs.grabScripts();
