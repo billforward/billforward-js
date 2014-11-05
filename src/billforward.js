@@ -148,7 +148,8 @@
 
             var payload = {
                 stripeToken: token,
-                cardID: card.id
+                cardID: card.id,
+                accountID: bfjs.state.accountID
             };
 
             // and re-submit
