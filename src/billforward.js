@@ -235,11 +235,6 @@
         // This identifies your website in the createToken call below
         var stripePublishableKey = data.results[0].publicKey;
         Stripe.setPublishableKey(stripePublishableKey);
-
-        //Stripe.card.createToken(bfjs.state.formElement, bfjs.stripe.responseHandler);
-        
-        
-        
         
         var tokenInfo = {
             name: bfjs.core.getFormValue("name"),
