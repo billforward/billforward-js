@@ -119,17 +119,15 @@
             bfjs.state.formElement = formElement;
             bfjs.state.$formElement = $formElement;
 
-            jQuery(function($) {
-                $formElement.submit(function(e) {
-                    // Disable the submit button to prevent repeated clicks
-                    $(this).find('button').prop('disabled', true);
+            $formElement.submit(function(e) {
+                // Disable the submit button to prevent repeated clicks
+                $(this).find('button').prop('disabled', true);
 
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (bfjs.stripe.needed) {
-                        bfjs.stripe.deferRequest();
-                    }
-                });
+                e.preventDefault();
+                e.stopPropagation();
+                if (bfjs.stripe.needed) {
+                    bfjs.stripe.deferRequest();
+                }
             });
 
             // ready to go
@@ -226,7 +224,7 @@
     bfjs.core.getFormValue = function(key) {
         var $formElement = bfjs.state.$formElement;
         
-        return $formElement.find("input[bf-data='"+key+"']").val();
+        return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
     bfjs.stripe.oncePreauthed = function(data) {
@@ -237,13 +235,29 @@
         var stripePublishableKey = data.results[0].publicKey;
         Stripe.setPublishableKey(stripePublishableKey);
         
-        var tokenInfo = {
-            name: bfjs.core.getFormValue("name"),
-            number: bfjs.core.getFormValue("number"),
-            cvc: bfjs.core.getFormValue("cvc"),
-            exp_month: bfjs.core.getFormValue("exp-month"),
-            exp_year: bfjs.core.getFormValue("exp-year")
+        var mappings = {
+            'cardholder-name': 'name',
+            'cvv': 'cvc',
+            'number': 'number',
+            'exp-month': 'exp_month',
+            'exp-year': 'exp_year',
+            'address-line1': 'address_line1',
+            'address-line2': 'address_line2',
+            'address-city': 'address_city',
+            'address-state': 'address_state',
+            'address-zip': 'address_zip',
+            'address-country': 'address_country',
         };
+        
+        var tokenInfo = {};
+        
+        for (var i in mappings) {
+            var mapping = mappings[i];
+            var valueFromForm = bfjs.core.getFormValue(i);
+            if (valueFromForm) {
+                tokenInfo[mappings[i]] = valueFromForm;
+            }
+        }
 
         Stripe.card.createToken(tokenInfo, bfjs.stripe.responseHandler);
     };
