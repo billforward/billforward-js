@@ -237,7 +237,7 @@
         
         var mappings = {
             'cardholder-name': 'name',
-            'cvv': 'cvc',
+            'cvc': 'cvc',
             'number': 'number',
             'exp-month': 'exp_month',
             'exp-year': 'exp_year',
