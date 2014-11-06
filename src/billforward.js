@@ -156,39 +156,45 @@
     };
 
     bfjs.doPreAuth = function(payload, gateway) {
-        var xmlhttp = new XMLHttpRequest();
         var controller = "vaulted-gateways/"
         var endpoint = "pre-auth";
         var fullURL = bfjs.state.api.url + controller + endpoint;
         var auth = bfjs.state.api.token;
-
-        xmlhttp.open("POST",fullURL,true);
-        xmlhttp.setRequestHeader('Content-Type', 'application/json');
-        xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
-
-        xmlhttp.onreadystatechange = function() {
-            bfjs.preAuthHandler(xmlhttp, gateway);
-        };
         
-        xmlhttp.send(JSON.stringify(payload));
+        $.ajax({
+                type: "POST",
+                url: fullURL,
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth); 
+                },
+            })
+        .success(function(data) {
+            bfjs.preAuthSuccessHandler(data, bfjs.stripe.key);
+        })
+        .fail(bfjs.preAuthFailHandler);
     };
 
     bfjs.doAuthCapture = function(payload, gateway) {
-        var xmlhttp = new XMLHttpRequest();
         var controller = "vaulted-gateways/"
         var endpoint = "auth-capture";
         var fullURL = bfjs.state.api.url + controller + endpoint;
         var auth = bfjs.state.api.token;
-
-        xmlhttp.open("POST",fullURL,true);
-        xmlhttp.setRequestHeader('Content-Type', 'application/json');
-        xmlhttp.setRequestHeader('Authorization', 'Bearer '+auth);
-
-        xmlhttp.onreadystatechange = function() {
-            bfjs.authCaptureHandler(xmlhttp, gateway);
-        };
         
-        xmlhttp.send(JSON.stringify(payload));
+        $.ajax({
+                type: "POST",
+                url: fullURL,
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth); 
+                },
+            })
+        .success(function(data) {
+            bfjs.authCaptureSuccessHandler(data, bfjs.stripe.key);
+        })
+        .fail(bfjs.authCaptureFailHandler);
     };
 
     bfjs.ultimateSuccess = function(paymentMethod) {
@@ -200,26 +206,6 @@
         console.error(reason);
         bfjs.state.callback(null, reason);
     };
-
-    bfjs.preAuthHandler = function(xmlhttp, gateway) {
-        if (xmlhttp.readyState == 4) {
-            if (xmlhttp.status == 200) {
-                bfjs.preAuthSuccessHandler(xmlhttp.responseText, gateway);
-            } else {
-                bfjs.preAuthFailHandler(xmlhttp.responseText);
-            }
-        }
-    };
-
-    bfjs.authCaptureHandler = function(xmlhttp, gateway) {
-        if (xmlhttp.readyState == 4) {
-            if (xmlhttp.status == 200) {
-                bfjs.authCaptureSuccessHandler(xmlhttp.responseText, gateway);
-            } else {
-                bfjs.authCaptureFailHandler(xmlhttp.responseText);
-            }
-        }
-    };
     
     bfjs.core.getFormValue = function(key) {
         var $formElement = bfjs.state.$formElement;
@@ -228,7 +214,7 @@
     };
 
     bfjs.stripe.oncePreauthed = function(data) {
-        if (!decoded.results) {
+        if (!data.results) {
             bfjs.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
         }
         // This identifies your website in the createToken call below
@@ -261,12 +247,11 @@
 
         Stripe.card.createToken(tokenInfo, bfjs.stripe.responseHandler);
     };
-
+    
     bfjs.preAuthSuccessHandler = function(data, gateway) {
         //console.log(data);
         try {
-            decoded = JSON.parse(data);
-            bfjs[gateway].oncePreauthed(decoded);
+            bfjs[gateway].oncePreauthed(data);
         } catch(e) {
             bfjs.ultimateFailure("Preauthorization failed. "+e.message);
         }
@@ -280,11 +265,10 @@
     bfjs.authCaptureSuccessHandler = function(data, gateway) {
         //console.log(data);
         try {
-            decoded = JSON.parse(data);
-            paymentMethod = decoded.results[0];
+            var paymentMethod = data.results[0];
             bfjs.ultimateSuccess(paymentMethod);
         } catch(e) {
-            bfjs.ultimateFailure(e.message);
+            bfjs.ultimateFailure("Authorized capture failed. "+e.message);
         }
     };
 
