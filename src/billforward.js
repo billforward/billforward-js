@@ -28,7 +28,7 @@
         } else {
             // everyone has this in their cache anyway, so..
             queue.push({
-                src: "http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js",
+                src: "//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js",
                 callback: bfjs.core.loadedCallback
             });
         }
@@ -161,14 +161,29 @@
         var fullURL = bfjs.state.api.url + controller + endpoint;
         var auth = bfjs.state.api.token;
         
+        $.support.cors = true;
+        
         $.ajax({
                 type: "POST",
                 url: fullURL,
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth); 
+                //dataType: 'jsonp',
+                //jsonp: function(data){console.log(data);},
+                crossDomain: true,
+                xhrFields: {
+                    //withCredentials: true
                 },
+                headers: {
+                    'Authorization': 'Bearer '+auth,
+                    //'Access-Control-Allow-Origin': "*",
+                    //'Access-Control-Request-Headers': 'Authorization Access-Control-Allow-Origin'
+                },
+                /*beforeSend: function (xhr) {
+                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth);
+                    xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+                    xhr.withCredentials = true;
+                },*/
             })
         .success(function(data) {
             bfjs.preAuthSuccessHandler(data, bfjs.stripe.key);
@@ -187,9 +202,22 @@
                 url: fullURL,
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth); 
+                //dataType: 'jsonp',
+                //jsonp: function(data){console.log(data);},
+                crossDomain: true,
+                xhrFields: {
+                    //withCredentials: true
                 },
+                headers: {
+                    'Authorization': 'Bearer '+auth,
+                    //'Access-Control-Allow-Origin': "*",
+                    //'Access-Control-Request-Headers': 'Authorization Access-Control-Allow-Origin'
+                },
+                /*beforeSend: function (xhr) {
+                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth);
+                    xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+                    xhr.withCredentials = true;
+                },*/
             })
         .success(function(data) {
             bfjs.authCaptureSuccessHandler(data, bfjs.stripe.key);
