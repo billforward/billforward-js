@@ -15,7 +15,8 @@
     bfjs.state = {
         api: {
             url: null,
-            token: null
+            token: null,
+            organizationID: null
         },
         formElement: null,
         callback: null
@@ -104,7 +105,15 @@
     };
 
     bfjs.stripe.do = function(state) {
-        bfjs.doPreAuth({}, bfjs.stripe.key);
+    	var payload = {
+    		"gateway": "Stripe"
+    	}
+
+    	if(bfjs.state.api.organizationID != null) {
+        	payload.organizationID = bfjs.state.api.organizationID;
+        }
+
+        bfjs.doPreAuth(payload, bfjs.stripe.key);
     };
 
     bfjs.core.do = function() {
@@ -149,6 +158,10 @@
                 cardID: card.id,
                 accountID: bfjs.state.accountID
             };
+
+            if(bfjs.state.api.organizationID != null) {
+            	payload.organizationID = bfjs.state.api.organizationID;
+            }
 
             // and re-submit
             bfjs.doAuthCapture(payload, bfjs.stripe.key);
@@ -316,9 +329,10 @@
         }
     };
 
-    bfjs.useAPI = function(url, token) {
+    bfjs.useAPI = function(url, token, organizationID) {
         bfjs.state.api.url = url;
         bfjs.state.api.token = token;
+        bfjs.state.api.organizationID = organizationID;
         bfjs.core.instantiated = true;
     };
 
