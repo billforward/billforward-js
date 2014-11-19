@@ -3,13 +3,20 @@
     // core is mainly to check if jquery is loaded
     bfjs.core = {
         loaded:false,
-        instantiated:false,
+        hasBfCredentials:false,
+        gatewayChosen:false,
         deferredRequest:null
     };
     bfjs.stripe = {
         key: 'stripe',
         loaded:false,
-        needed:true,
+        loadMe:false,
+        deferredRequest:null
+    };
+    bfjs.braintree = {
+        key: 'braintree',
+        loaded:false,
+        loadMe:false,
         deferredRequest:null
     };
     bfjs.state = {
@@ -19,7 +26,8 @@
             organizationID: null
         },
         formElement: null,
-        callback: null
+        callback: null,
+        chosenGateway: null
     };
 
     bfjs.grabScripts = function() {
@@ -33,11 +41,25 @@
                 callback: bfjs.core.loadedCallback
             });
         }
-        if (bfjs.stripe.needed) {
-            queue.push({
-                src: "https://js.stripe.com/v2/",
-                callback: bfjs.stripe.loadedCallback
-            });
+        if (bfjs.stripe.loadMe) {
+            if (typeof window.Stripe !== 'undefined') {
+                queue.push({
+                    src: "https://js.stripe.com/v2/",
+                    callback: bfjs.stripe.loadedCallback
+                });
+            } else {
+                bfjs.stripe.loadedCallback();
+            }
+        }
+        if (bfjs.braintree.loadMe) {
+            if (typeof window.braintree !== 'undefined') {
+                queue.push({
+                    src: "https://assets.braintreegateway.com/v2/braintree.js",
+                    callback: bfjs.braintree.loadedCallback
+                });
+            } else {
+                bfjs.braintree.loadedCallback();
+            }
         }
 
         for (var i = 0; i<queue.length; i++) {
@@ -88,11 +110,27 @@
         bfjs.stripe.deferredRequest();
     };
 
+    bfjs.braintree.loadedCallback = function() {
+        // now that braintree's loaded, check if we had pending requests..
+        bfjs.braintree.loaded = true;
+
+        if (bfjs.braintree.deferredRequest)
+        bfjs.braintree.deferredRequest();
+    };
+
     bfjs.stripe.deferRequest = function() {
         if (bfjs.stripe.loaded) {
             bfjs.stripe.do();
         } else {
             bfjs.stripe.deferredRequest = bfjs.stripe.do;
+        }
+    };
+
+    bfjs.braintree.deferRequest = function() {
+        if (bfjs.braintree.loaded) {
+            bfjs.braintree.do();
+        } else {
+            bfjs.braintree.deferredRequest = bfjs.braintree.do;
         }
     };
 
@@ -116,6 +154,18 @@
         bfjs.doPreAuth(payload, bfjs.stripe.key);
     };
 
+    bfjs.braintree.do = function(state) {
+        var payload = {
+            "gateway": "Braintree"
+        }
+
+        if(bfjs.state.api.organizationID != null) {
+            payload.organizationID = bfjs.state.api.organizationID;
+        }
+
+        bfjs.doPreAuth(payload, bfjs.braintree.key);
+    };
+
     bfjs.core.do = function() {
         $( document ).ready(function() {
             var $formElement = $(bfjs.core.formElementCandidate);
@@ -134,9 +184,7 @@
 
                 e.preventDefault();
                 e.stopPropagation();
-                if (bfjs.stripe.needed) {
-                    bfjs.stripe.deferRequest();
-                }
+                bfjs[bfjs.state.chosenGateway].deferRequest();
             });
 
             // ready to go
@@ -169,7 +217,7 @@
     };
 
     bfjs.doPreAuth = function(payload, gateway) {
-        var controller = "vaulted-gateways/"
+        var controller = "tokenization/"
         var endpoint = "pre-auth";
         var fullURL = bfjs.state.api.url + controller + endpoint;
         var auth = bfjs.state.api.token;
@@ -205,7 +253,7 @@
     };
 
     bfjs.doAuthCapture = function(payload, gateway) {
-        var controller = "vaulted-gateways/"
+        var controller = "tokenization/"
         var endpoint = "auth-capture";
         var fullURL = bfjs.state.api.url + controller + endpoint;
         var auth = bfjs.state.api.token;
@@ -318,12 +366,17 @@
         bfjs.ultimateFailure(reason);
     };
 
-    bfjs.captureCardOnSubmit = function(formElementSelector, accountID, callback) {
-        if (bfjs.core.instantiated) {
-            bfjs.core.formElementCandidate = formElementSelector;
-            bfjs.state.accountID = accountID;
-            bfjs.state.callback = callback;
-            bfjs.core.deferRequest();
+    bfjs.captureCardOnSubmit = function(formElementSelector, accountID, callback, targetGateway) {
+        if (bfjs.core.hasBfCredentials) {
+            if (bfjs.core.gatewayChosen){
+                bfjs.core.formElementCandidate = formElementSelector;
+                bfjs.state.accountID = accountID;
+                bfjs.state.callback = callback;
+                bfjs.state.chosenGateway = targetGateway;
+                bfjs.core.deferRequest();
+            } else {
+                throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
+            }
         } else {
             throw "You need to first call bfjs.useAPI() will BillForward credentials";
         }
@@ -333,10 +386,27 @@
         bfjs.state.api.url = url;
         bfjs.state.api.token = token;
         bfjs.state.api.organizationID = organizationID;
-        bfjs.core.instantiated = true;
+        bfjs.core.hasBfCredentials = true;
     };
 
-    bfjs.grabScripts();
+    bfjs.loadGateways = function(gateways) {
+        for(var g in gateways) {
+            var gateway = gateways[g];
+            switch(gateway.toLowerCase()) {
+                case 'stripe':
+                case 'braintree':
+                    bfjs[gateway.toLowerCase()].loadMe = true;
+                    bfjs.core.gatewayChosen = true;
+                    break;
+                default:
+                    throw "'"+gateway+"' is not the name of any supported gateway."
+            }
+        }
+        
+        if (bfjs.core.gatewayChosen){
+            bfjs.grabScripts();
+        }
+    };
 
     window.BillForward = window.BillForward || bfjs;
 }());
