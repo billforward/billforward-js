@@ -1,24 +1,107 @@
 (function() {
     var bfjs = {};
+
+    bfjs.LateActor = (function() {
+        var TheClass = function() {
+            this.loaded = false;
+            this.deferredTransactions = [];
+        };
+
+        TheClass.construct = function() {
+            return new TheClass();
+        };
+
+        var p = TheClass.prototype;
+
+        p.loadedCallback = function() {
+            this.loaded = true;
+
+            for (var i in this.deferredTransactions) {
+                var transaction = this.deferredTransactions[i];
+                transaction.do();
+            }
+            this.deferredTransactions = [];
+        };
+
+        p.doWhenReady = function(transaction) {
+            this.deferredTransactions.push(transaction);
+            if (this.loaded) {
+                this.loadedCallback();
+            }
+        };
+
+        return TheClass;
+    }());
+
+    bfjs.CoreActor = (function() {
+        var TheClass = function() {
+            this.hasBfCredentials = false;
+            this.gatewayChosen = false;
+        };
+
+        TheClass.construct = function() {
+            return new TheClass();
+        };
+
+        var p = bfjs.LateActor.prototype;
+        p.constructor = TheClass;
+
+        return TheClass;
+    }());
+
+    bfjs.GatewayActor = (function() {
+        var TheClass = function() {
+            this.loaded = false;
+            this.loadMe = false;
+        };
+
+        TheClass.construct = function() {
+            return new TheClass();
+        };
+
+        var p = bfjs.LateActor.prototype;
+        p.constructor = TheClass;
+
+        return TheClass;
+    }());
+
+    bfjs.StripeGateway = (function() {
+        var TheClass = function() {
+            this.key = 'stripe';
+        };
+
+        TheClass.construct = function() {
+            return new TheClass();
+        };
+
+        var p = bfjs.GatewayActor.prototype;
+        p.constructor = TheClass;
+
+        return TheClass;
+    }());
+
+    bfjs.BraintreeGateway = (function() {
+        var TheClass = function() {
+            this.key = 'stripe';
+        };
+
+        TheClass.construct = function() {
+            return new TheClass();
+        };
+
+        var p = bfjs.GatewayActor.prototype;
+        p.constructor = TheClass;
+
+        return TheClass;
+    }());
+
     // core is mainly to check if jquery is loaded
-    bfjs.core = {
-        loaded:false,
-        hasBfCredentials:false,
-        gatewayChosen:false,
-        deferredTransactions:[]
-    };
-    bfjs.stripe = {
-        key: 'stripe',
-        loaded:false,
-        loadMe:false,
-        deferredRequest:null
-    };
-    bfjs.braintree = {
-        key: 'braintree',
-        loaded:false,
-        loadMe:false,
-        deferredRequest:null
-    };
+    bfjs.core = bfjs.CoreActor.construct();
+
+    bfjs.stripe = bfjs.StripeGateway.construct();
+
+    bfjs.braintree = bfjs.BraintreeGateway.construct();
+
     bfjs.state = {
         api: {
             url: null,
@@ -64,7 +147,7 @@
         }
     };
 
-    var bfjs.Transaction = (function() {
+    bfjs.Transaction = (function() {
         var TheClass = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
             this.formElementCandidate = formElementCandidate;
             this.callback = callback;
@@ -137,48 +220,6 @@
 
         script.src = url;
         document.getElementsByTagName("head")[0].appendChild(script);
-    };
-
-    bfjs.core.loadedCallback = function() {
-        // now that core's loaded, check if we had pending requests..
-        bfjs.core.loaded = true;
-
-        for (var i in bfjs.core.deferredTransactions) {
-            var transaction = bfjs.core.deferredTransactions[i];
-            transaction.do();
-        }
-    };
-
-    bfjs.stripe.loadedCallback = function() {
-        // now that Stripe's loaded, check if we had pending requests..
-        bfjs.stripe.loaded = true;
-
-        if (bfjs.stripe.deferredRequest)
-        bfjs.stripe.deferredRequest();
-    };
-
-    bfjs.braintree.loadedCallback = function() {
-        // now that braintree's loaded, check if we had pending requests..
-        bfjs.braintree.loaded = true;
-
-        if (bfjs.braintree.deferredRequest)
-        bfjs.braintree.deferredRequest();
-    };
-
-    bfjs.stripe.deferRequest = function() {
-        if (bfjs.stripe.loaded) {
-            bfjs.stripe.do();
-        } else {
-            bfjs.stripe.deferredRequest = bfjs.stripe.do;
-        }
-    };
-
-    bfjs.braintree.deferRequest = function() {
-        if (bfjs.braintree.loaded) {
-            bfjs.braintree.do();
-        } else {
-            bfjs.braintree.deferredRequest = bfjs.braintree.do;
-        }
     };
 
     bfjs.stripe.do = function(state) {
@@ -383,11 +424,7 @@
         if (bfjs.core.hasBfCredentials) {
             if (bfjs.core.gatewayChosen){
                 var newTransaction = bfjs.Transaction.construct(bfjs, formElementSelector, accountID, callback, targetGateway);
-                if (bfjs.core.loaded) {
-                    newTransaction.do();
-                } else {
-                    bfjs.core.deferredTransactions.push(newTransaction);
-                }
+                bfjs.core.doWhenReady(newTransaction);
             } else {
                 throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
             }
