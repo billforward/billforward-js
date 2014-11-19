@@ -145,7 +145,12 @@
 
                     e.preventDefault();
                     e.stopPropagation();
-                    self.bfjs[self.chosenGateway].deferRequest();
+
+                    var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
+                    var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
+
+                    var newGatewayTransaction = transactionClass.construct(transactionClass);
+                    gatewayInstance.doWhenReady(newGatewayTransaction);
                 });
 
                 // ready to go
@@ -156,17 +161,55 @@
         return TheClass;
     }());
 
+    bfjs.GatewayTransaction = (function() {
+        var TheClass = function(myGateway) {
+            this.myGateway = myGateway;
+        };
+
+        TheClass.construct = function(myGateway) {
+            return new this(myGateway);
+        };
+
+        var p = TheClass.prototype = new bfjs.Transaction();
+        p.constructor = TheClass;
+
+        return TheClass;
+    }());
+
+    bfjs.StripeTransaction = (function() {
+        var TheClass = function() {
+        };
+
+        TheClass.construct = function() {
+            return new this();
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayTransaction();
+        p.constructor = TheClass;
+
+        p.do = function() {
+            console.log('nothing much');
+        };
+
+        return TheClass;
+    }());
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
-    bfjs.stripe = bfjs.StripeGateway.construct();
+    bfjs.gatewayInstances = {
+        'stripe': bfjs.StripeGateway.construct(),
+        'braintree': bfjs.BraintreeGateway.construct()
+    };
 
-    bfjs.braintree = bfjs.BraintreeGateway.construct();
+    bfjs.gatewayTransactionClasses = {
+        'stripe': bfjs.StripeTransaction
+    };
 
     bfjs.lateActors = [
         bfjs.core,
-        bfjs.stripe,
-        bfjs.braintree
+        bfjs.gatewayInstances['stripe'],
+        bfjs.gatewayInstances['braintree']
     ];
 
     bfjs.state = {
@@ -178,15 +221,17 @@
     };
 
     bfjs.grabScripts = function() {
+
         var queue = [];
         for (var i in bfjs.lateActors) {
             var actor = bfjs.lateActors[i];
             //console.log(actor);
 
             if (typeof window[actor.depName] !== 'undefined') {
-                actor.loadedCallback();
+                actor.loadedCallback.call(actor);
             } else {
                 queue.push({
+                    actor: actor,
                     src: actor.depUrl,
                     callback: actor.loadedCallback
                 });
@@ -194,17 +239,17 @@
         }
 
         for (var i = 0; i<queue.length; i++) {
-            bfjs.loadScript(queue[i].src, queue[i].callback);
+            bfjs.loadScript(queue[i].src, queue[i].callback, queue[i].actor);
         }
     };
 
-    bfjs.loadScript = function(url, callback){
+    bfjs.loadScript = function(url, callback, actor){
 
         var script = document.createElement("script")
         script.type = "text/javascript";
 
         var doCallback = function() {
-            callback();
+            callback.call(actor);
         };
 
         if (script.readyState){  //IE
@@ -225,7 +270,7 @@
         document.getElementsByTagName("head")[0].appendChild(script);
     };
 
-    bfjs.stripe.do = function(state) {
+    /*bfjs.stripe.do = function(state) {
     	var payload = {
     		"gateway": "Stripe"
     	}
@@ -271,7 +316,7 @@
             // and re-submit
             bfjs.doAuthCapture(payload, bfjs.stripe.key);
         }
-    };
+    };*/
 
     bfjs.doPreAuth = function(payload, gateway) {
         var controller = "tokenization/"
@@ -359,7 +404,7 @@
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
-    bfjs.stripe.oncePreauthed = function(data) {
+    /*bfjs.stripe.oncePreauthed = function(data) {
         if (!data.results) {
             bfjs.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
         }
@@ -392,7 +437,7 @@
         }
 
         Stripe.card.createToken(tokenInfo, bfjs.stripe.responseHandler);
-    };
+    };*/
     
     bfjs.preAuthSuccessHandler = function(data, gateway) {
         //console.log(data);
@@ -449,7 +494,7 @@
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'braintree':
-                    bfjs[gateway.toLowerCase()].loadMe = true;
+                    bfjs.gatewayInstances[gateway.toLowerCase()].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
                 default:
