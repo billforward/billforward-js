@@ -5,7 +5,7 @@
         loaded:false,
         hasBfCredentials:false,
         gatewayChosen:false,
-        deferredRequest:null
+        deferredTransactions:[]
     };
     bfjs.stripe = {
         key: 'stripe',
@@ -24,10 +24,7 @@
             url: null,
             token: null,
             organizationID: null
-        },
-        formElement: null,
-        callback: null,
-        chosenGateway: null
+        }
     };
 
     bfjs.grabScripts = function() {
@@ -67,6 +64,54 @@
         }
     };
 
+    var bfjs.Transaction = (function() {
+        var TheClass = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
+            this.formElementCandidate = formElementCandidate;
+            this.callback = callback;
+            this.accountID = accountID;
+            this.targetGateway = targetGateway;
+            this.bfjs = bfjs;
+            this.state = {
+                formElement:  null;
+                $formElement: null;
+            };
+        };
+
+        TheClass.construct = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
+            return new TheClass(bfjs, formElementCandidate, accountID, callback, targetGateway);
+        };
+
+        var p = TheClass.prototype;
+
+        p.do = function() {
+            $( document ).ready(function() {
+                var $formElement = $(this.formElementCandidate);
+                var formElement = $formElement.get(0);
+
+                if (!(formElement instanceof HTMLElement)) {
+                    throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
+                }
+
+                this.state.formElement = formElement;
+                this.state.$formElement = $formElement;
+
+                $formElement.submit(function(e) {
+                    // Disable the submit button to prevent repeated clicks
+                    $(this).find('button').prop('disabled', true);
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.bfjs[this.chosenGateway].deferRequest();
+                });
+
+                // ready to go
+                $formElement.find('button').prop('disabled', false);
+            });
+        };
+
+        return TheClass;
+    }());
+
     bfjs.loadScript = function(url, callback){
 
         var script = document.createElement("script")
@@ -98,8 +143,10 @@
         // now that core's loaded, check if we had pending requests..
         bfjs.core.loaded = true;
 
-        if (bfjs.core.deferredRequest)
-        bfjs.core.deferredRequest();
+        for (var i in bfjs.core.deferredTransactions) {
+            var transaction = bfjs.core.deferredTransactions[i];
+            transaction.do();
+        }
     };
 
     bfjs.stripe.loadedCallback = function() {
@@ -134,14 +181,6 @@
         }
     };
 
-    bfjs.core.deferRequest = function() {
-        if (bfjs.core.loaded) {
-            bfjs.core.do();
-        } else {
-            bfjs.core.deferredRequest = bfjs.core.do;
-        }
-    };
-
     bfjs.stripe.do = function(state) {
     	var payload = {
     		"gateway": "Stripe"
@@ -164,32 +203,6 @@
         }
 
         bfjs.doPreAuth(payload, bfjs.braintree.key);
-    };
-
-    bfjs.core.do = function() {
-        $( document ).ready(function() {
-            var $formElement = $(bfjs.core.formElementCandidate);
-            var formElement = $formElement.get(0);
-
-            if (!(formElement instanceof HTMLElement)) {
-                throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
-            }
-
-            bfjs.state.formElement = formElement;
-            bfjs.state.$formElement = $formElement;
-
-            $formElement.submit(function(e) {
-                // Disable the submit button to prevent repeated clicks
-                $(this).find('button').prop('disabled', true);
-
-                e.preventDefault();
-                e.stopPropagation();
-                bfjs[bfjs.state.chosenGateway].deferRequest();
-            });
-
-            // ready to go
-            $formElement.find('button').prop('disabled', false);
-        });
     };
 
     bfjs.stripe.responseHandler = function(status, response) {
@@ -369,11 +382,12 @@
     bfjs.captureCardOnSubmit = function(formElementSelector, accountID, callback, targetGateway) {
         if (bfjs.core.hasBfCredentials) {
             if (bfjs.core.gatewayChosen){
-                bfjs.core.formElementCandidate = formElementSelector;
-                bfjs.state.accountID = accountID;
-                bfjs.state.callback = callback;
-                bfjs.state.chosenGateway = targetGateway;
-                bfjs.core.deferRequest();
+                var newTransaction = bfjs.Transaction.construct(bfjs, formElementSelector, accountID, callback, targetGateway);
+                if (bfjs.core.loaded) {
+                    newTransaction.do();
+                } else {
+                    bfjs.core.deferredTransactions.push(newTransaction);
+                }
             } else {
                 throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
             }
