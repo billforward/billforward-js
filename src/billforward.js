@@ -107,6 +107,55 @@
         return TheClass;
     }());
 
+    bfjs.Transaction = (function() {
+        var TheClass = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
+            this.formElementCandidate = formElementCandidate;
+            this.callback = callback;
+            this.accountID = accountID;
+            this.targetGateway = targetGateway;
+            this.bfjs = bfjs;
+            this.state = {
+                formElement:  null,
+                $formElement: null
+            };
+        };
+
+        TheClass.construct = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
+            return new this(bfjs, formElementCandidate, accountID, callback, targetGateway);
+        };
+
+        var p = TheClass.prototype;
+
+        p.do = function() {
+            var self = this;
+            $( document ).ready(function() {
+                var $formElement = $(self.formElementCandidate);
+                var formElement = $formElement.get(0);
+
+                if (!(formElement instanceof HTMLElement)) {
+                    throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
+                }
+
+                self.state.formElement = formElement;
+                self.state.$formElement = $formElement;
+
+                $formElement.submit(function(e) {
+                    // Disable the submit button to prevent repeated clicks
+                    $(self).find('button').prop('disabled', true);
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    self.bfjs[self.chosenGateway].deferRequest();
+                });
+
+                // ready to go
+                $formElement.find('button').prop('disabled', false);
+            });
+        };
+
+        return TheClass;
+    }());
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -132,7 +181,7 @@
         var queue = [];
         for (var i in bfjs.lateActors) {
             var actor = bfjs.lateActors[i];
-            console.log(actor);
+            //console.log(actor);
 
             if (typeof window[actor.depName] !== 'undefined') {
                 actor.loadedCallback();
@@ -148,54 +197,6 @@
             bfjs.loadScript(queue[i].src, queue[i].callback);
         }
     };
-
-    bfjs.Transaction = (function() {
-        var TheClass = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
-            this.formElementCandidate = formElementCandidate;
-            this.callback = callback;
-            this.accountID = accountID;
-            this.targetGateway = targetGateway;
-            this.bfjs = bfjs;
-            this.state = {
-                formElement:  null,
-                $formElement: null
-            };
-        };
-
-        TheClass.construct = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
-            return new TheClass(bfjs, formElementCandidate, accountID, callback, targetGateway);
-        };
-
-        var p = TheClass.prototype;
-
-        p.do = function() {
-            $( document ).ready(function() {
-                var $formElement = $(this.formElementCandidate);
-                var formElement = $formElement.get(0);
-
-                if (!(formElement instanceof HTMLElement)) {
-                    throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
-                }
-
-                this.state.formElement = formElement;
-                this.state.$formElement = $formElement;
-
-                $formElement.submit(function(e) {
-                    // Disable the submit button to prevent repeated clicks
-                    $(this).find('button').prop('disabled', true);
-
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.bfjs[this.chosenGateway].deferRequest();
-                });
-
-                // ready to go
-                $formElement.find('button').prop('disabled', false);
-            });
-        };
-
-        return TheClass;
-    }());
 
     bfjs.loadScript = function(url, callback){
 
