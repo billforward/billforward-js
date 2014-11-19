@@ -8,7 +8,7 @@
         };
 
         TheClass.construct = function() {
-            return new TheClass();
+            return new this();
         };
 
         var p = TheClass.prototype;
@@ -37,13 +37,18 @@
         var TheClass = function() {
             this.hasBfCredentials = false;
             this.gatewayChosen = false;
+            this.loadMe = true;
+
+            // statics
+            this.depUrl = "//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js";
+            this.depName = "jQuery";
         };
 
         TheClass.construct = function() {
-            return new TheClass();
+            return new this();
         };
 
-        var p = bfjs.LateActor.prototype;
+        var p = TheClass.prototype = new bfjs.LateActor();
         p.constructor = TheClass;
 
         return TheClass;
@@ -56,10 +61,10 @@
         };
 
         TheClass.construct = function() {
-            return new TheClass();
+            return new this();
         };
 
-        var p = bfjs.LateActor.prototype;
+        var p = TheClass.prototype = new bfjs.LateActor();
         p.constructor = TheClass;
 
         return TheClass;
@@ -67,14 +72,18 @@
 
     bfjs.StripeGateway = (function() {
         var TheClass = function() {
+            // statics
             this.key = 'stripe';
+            this.depUrl = "https://js.stripe.com/v2/";
+            this.depName = "Stripe";
         };
 
         TheClass.construct = function() {
-            return new TheClass();
+            return new this();
         };
 
-        var p = bfjs.GatewayActor.prototype;
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+
         p.constructor = TheClass;
 
         return TheClass;
@@ -82,14 +91,17 @@
 
     bfjs.BraintreeGateway = (function() {
         var TheClass = function() {
-            this.key = 'stripe';
+            // statics
+            this.key = 'braintree';
+            this.depUrl = "https://assets.braintreegateway.com/v2/braintree.js";
+            this.depName = "braintree";
         };
 
         TheClass.construct = function() {
-            return new TheClass();
+            return new this();
         };
 
-        var p = bfjs.GatewayActor.prototype;
+        var p = TheClass.prototype = new bfjs.GatewayActor();
         p.constructor = TheClass;
 
         return TheClass;
@@ -102,6 +114,12 @@
 
     bfjs.braintree = bfjs.BraintreeGateway.construct();
 
+    bfjs.lateActors = [
+        bfjs.core,
+        bfjs.stripe,
+        bfjs.braintree
+    ];
+
     bfjs.state = {
         api: {
             url: null,
@@ -112,33 +130,17 @@
 
     bfjs.grabScripts = function() {
         var queue = [];
-        if (typeof jQuery !== 'undefined') {
-            bfjs.core.loadedCallback();
-        } else {
-            // everyone has this in their cache anyway, so..
-            queue.push({
-                src: "//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js",
-                callback: bfjs.core.loadedCallback
-            });
-        }
-        if (bfjs.stripe.loadMe) {
-            if (typeof window.Stripe !== 'undefined') {
-                queue.push({
-                    src: "https://js.stripe.com/v2/",
-                    callback: bfjs.stripe.loadedCallback
-                });
+        for (var i in bfjs.lateActors) {
+            var actor = bfjs.lateActors[i];
+            console.log(actor);
+
+            if (typeof window[actor.depName] !== 'undefined') {
+                actor.loadedCallback();
             } else {
-                bfjs.stripe.loadedCallback();
-            }
-        }
-        if (bfjs.braintree.loadMe) {
-            if (typeof window.braintree !== 'undefined') {
                 queue.push({
-                    src: "https://assets.braintreegateway.com/v2/braintree.js",
-                    callback: bfjs.braintree.loadedCallback
+                    src: actor.depUrl,
+                    callback: actor.loadedCallback
                 });
-            } else {
-                bfjs.braintree.loadedCallback();
             }
         }
 
@@ -155,8 +157,8 @@
             this.targetGateway = targetGateway;
             this.bfjs = bfjs;
             this.state = {
-                formElement:  null;
-                $formElement: null;
+                formElement:  null,
+                $formElement: null
             };
         };
 
