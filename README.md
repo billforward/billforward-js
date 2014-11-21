@@ -206,7 +206,7 @@ Here we use JQuery to add some POST variables to the form, and point the form ac
 function callback(data, error) {
 	if (!error) {
 		var addPostVariable = function(varName, value) {
-			$(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
+			$(formSelector).append($('<input type="hidden" name="'+varName+'"/>').val(value));
 		}
 		
 		var postVars = {
@@ -251,6 +251,10 @@ Your finished checkout page might look like this:
 					$(formSelector).find('.payment-errors').text(error);
 					$(formSelector).find('button').prop('disabled', false);
 				} else {
+					var addPostVariable = function(varName, value) {
+						$(formSelector).append($('<input type="hidden" name="'+varName+'"/>').val(value));
+					}
+					
 					var postVars = {
 						accountID: data.accountID
 					};
