@@ -17,10 +17,12 @@ BillForward.js presents a generic interface in code for:
 The code you write is the same, regardless of payment gateway. This makes it trivial to use certain gateways for certain types of card.
 
 ###Supported gateways
-Currently support:
-`stripe`.
+Currently supported:
+
+`stripe`
 
 In development:
+
 `braintree`
 
 ###Initialize
