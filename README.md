@@ -124,8 +124,9 @@ This is the simplest invocation. More likely you will use these alternative invo
 It's possible this is a returning customer, or you have already set up some account for them in BillForward. Providing their account ID enables BillForward.js to add the payment method to that existing account:
 
 ```js
-var accountID = '74DA7D63-EAEB-431B-9745-76F9109FD842';
+var formSelector = '#payment-form';
 var targetGateway = 'stripe';
+var accountID = '74DA7D63-EAEB-431B-9745-76F9109FD842';
 BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
@@ -135,8 +136,9 @@ Perhaps the customer is a new customer, or you have not yet set up an account fo
 Provide a `null` account ID, and the default action will occur: BillForward.js creates automatically a new account, and attaches the created payment method to that account.
 
 ```js
-var accountID = null;
+var formSelector = '#payment-form';
 var targetGateway = 'stripe';
+var accountID = null;
 BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
@@ -146,8 +148,9 @@ Naturally you will want to know when the transaction is finished, so your custom
 Pass in a callback function to handle the result:
 
 ```js
-var accountID = null;
+var formSelector = '#payment-form';
 var targetGateway = 'stripe';
+var accountID = null;
 BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID, callback);
 
 function callback(data, error) {
@@ -203,15 +206,15 @@ Here we use JQuery to add some POST variables to the form, and point the form ac
 function callback(data, error) {
 	if (!error) {
 		var addPostVariable = function(varName, value) {
-		$(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
-	}
-	
-	var postVars = {
-		accountID: data.accountID
-	};
-	for (var i in postVars) {
-		addPostVariable(i, postVars[i]);
-	}
+			$(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
+		}
+		
+		var postVars = {
+			accountID: data.accountID
+		};
+		for (var i in postVars) {
+			addPostVariable(i, postVars[i]);
+		}
 	
 		$(formSelector).attr("action", "handlePayment.php");
 		$(formSelector).attr("method", "POST");
@@ -238,9 +241,11 @@ Your finished checkout page might look like this:
 			var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
 			BillForward.useAPI(bfAPIURL, bfAPIKey);
 			
-			var accountID = null;
+			var formSelector = '#payment-form';
 			var targetGateway = 'stripe';
+			var accountID = null;
 			BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID, callback);
+			
 			function callback(data, error) {
 				if (error) {
 					$(formSelector).find('.payment-errors').text(error);
