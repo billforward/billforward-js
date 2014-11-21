@@ -221,39 +221,39 @@ Your finished checkout page might look like this:
 ```html
 <html>
 	<head>
-	  <!-- Include JQuery to make life easier -->
+		<!-- Include JQuery to make life easier -->
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-
+		
 		<!-- Include BillForwardJS -->
 		<script type="text/javascript" src="lib/billforward-js/src/billforward.js"></script>
-
+		
 		<script type="text/javascript">
-      var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
-      var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
-      BillForward.useAPI(bfAPIURL, bfAPIKey);
-      
-      var formSelector = '#payment-form';
+			var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
+			var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
+			BillForward.useAPI(bfAPIURL, bfAPIKey);
+			
+			var formSelector = '#payment-form';
 			BillForward.captureCardOnSubmit(formSelector, 'stripe', null, callback);
 			function callback(data, error) {
 				if (error) {
 					$(formSelector).find('.payment-errors').text(error);
-          $(formSelector).find('button').prop('disabled', false);
+					$(formSelector).find('button').prop('disabled', false);
 				} else {
-          var postVars = {
-            accountID: data.accountID
-          };
-          for (var i in postVars) {
-              addPostVariable(i, postVars[i]);
-          }
-          
-          $(formSelector).attr("action", "handlePayment.php");
-          $(formSelector).attr("method", "POST");
-      
-          $(formSelector).get(0).submit();
+					var postVars = {
+						accountID: data.accountID
+					};
+					for (var i in postVars) {
+						addPostVariable(i, postVars[i]);
+					}
+					
+					$(formSelector).attr("action", "handlePayment.php");
+					$(formSelector).attr("method", "POST");
+					
+					$(formSelector).get(0).submit();
 				}
 			};
-    </script>
-	</head>
+			</script>
+		</head>
 	<body>
     <form id="payment-form">
     	<span class="payment-errors"></span>
