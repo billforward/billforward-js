@@ -12,8 +12,9 @@ Where the payment gateway allows, we enable you to present your own custom form.
 Should a payment gateway allow only 'hosted' forms, BillForward.js will simplify the process of fetching, embedding, and communicating with the form. We will also protect your page from being forcibly redirected.
 
 BillForward.js presents a generic interface in code for:
-- card capture from custom forms
-- card capture from hosted forms
+- Card capture from custom forms
+- Card capture from hosted forms
+
 The code you write is the same, regardless of payment gateway. This makes it trivial to use certain gateways for certain types of card.
 
 ###Supported gateways
