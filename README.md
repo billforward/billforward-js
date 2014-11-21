@@ -206,7 +206,7 @@ Here we use JQuery to add some POST variables to the form, and point the form ac
 function callback(data, error) {
 	if (!error) {
 		var addPostVariable = function(varName, value) {
-			$(formSelector).append($('<input type="hidden" name="'+varName+'"/>').val(value));
+			$(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
 		}
 		
 		var postVars = {
@@ -252,7 +252,7 @@ Your finished checkout page might look like this:
 					$(formSelector).find('button').prop('disabled', false);
 				} else {
 					var addPostVariable = function(varName, value) {
-						$(formSelector).append($('<input type="hidden" name="'+varName+'"/>').val(value));
+						$(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
 					}
 					
 					var postVars = {
@@ -268,37 +268,37 @@ Your finished checkout page might look like this:
 					$(formSelector).get(0).submit();
 				}
 			};
-			</script>
-		</head>
+		</script>
+	</head>
 	<body>
-    <form id="payment-form">
-    	<span class="payment-errors"></span>
-    
-    	<div class="form-row">
-    		<label>
-    			<span>Card Number</span>
-    			<input type="text" size="20" bf-data="number" value="4242424242424242"/>
-    		</label>
-    	</div>
-    
-    	<div class="form-row">
-    		<label>
-    			<span>CVC</span>
-    			<input type="text" size="4" bf-data="cvc" value="123"/>
-    		</label>
-    	</div>
-    
-    	<div class="form-row">
-    		<label>
-    			<span>Expiration (MM/YYYY)</span>
-    			<input type="text" size="2" bf-data="exp-month" value="01"/>
-    		</label>
-    		<span> / </span>
-    		<input type="text" size="4" bf-data="exp-year" value="2016"/>
-    	</div>
-    
-    	<button type="submit" disabled="true">Submit Payment</button>
-    </form>
-  </body>
+		<form id="payment-form">
+			<span class="payment-errors"></span>
+			
+			<div class="form-row">
+			    <label>
+			    	<span>Card Number</span>
+			    	<input type="text" size="20" bf-data="number" value="4242424242424242"/>
+			    </label>
+			</div>
+			
+			<div class="form-row">
+			    <label>
+			    	<span>CVC</span>
+			    	<input type="text" size="4" bf-data="cvc" value="123"/>
+			    </label>
+			</div>
+			
+			<div class="form-row">
+			    <label>
+			    	<span>Expiration (MM/YYYY)</span>
+			    	<input type="text" size="2" bf-data="exp-month" value="01"/>
+			    </label>
+			    <span> / </span>
+			    <input type="text" size="4" bf-data="exp-year" value="2016"/>
+			</div>
+			
+			<button type="submit" disabled="true">Submit Payment</button>
+		</form>
+	</body>
 </html>
 ```
