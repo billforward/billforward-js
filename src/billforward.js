@@ -108,7 +108,7 @@
     }());
 
     bfjs.Transaction = (function() {
-        var TheClass = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
+        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback) {
             this.formElementCandidate = formElementCandidate;
             this.callback = callback;
             this.accountID = accountID;
@@ -120,8 +120,8 @@
             };
         };
 
-        TheClass.construct = function(bfjs, formElementCandidate, accountID, callback, targetGateway) {
-            return new this(bfjs, formElementCandidate, accountID, callback, targetGateway);
+        TheClass.construct = function() {
+            return new this.apply(this, arguments);
         };
 
         var p = TheClass.prototype;
@@ -173,6 +173,68 @@
         var p = TheClass.prototype = new bfjs.Transaction();
         p.constructor = TheClass;
 
+        TheClass.buildBFAjax = function(payload, endpoint) {
+            var controller = "tokenization/"
+            var fullURL = bfjs.state.api.url + controller + endpoint;
+            var auth = bfjs.state.api.token;
+
+            var ajaxObj = {
+                type: "POST",
+                url: fullURL,
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                crossDomain: true,
+                headers: {
+                    'Authorization': 'Bearer '+auth,
+                },
+            }
+            return ajaxObj;
+        };
+
+        p.doPreAuth = function(payload, gateway) {
+            var endpoint = "pre-auth";
+
+            var ajaxObj = TheClass.buildBFAjax(payload, endpoint);
+            
+            $.ajax(ajaxObj)
+            .success(this.oncePreauthed)
+            .fail(this.preAuthFailHandler);
+        };
+
+        p.doAuthCapture = function(payload, gateway) {
+            var endpoint = "auth-capture";
+
+            var ajaxObj = TheClass.buildBFAjax(payload, endpoint);
+            
+            $.ajax(ajaxObj)
+            .success(this.onceAuthCaptured)
+            .fail(this.authCaptureFailHandler);
+        };
+
+        p.preAuthFailHandler = function(reason) {
+            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+            this.ultimateFailure(reason);
+        };
+
+        p.authCaptureFailHandler = function(reason) {
+            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+            this.ultimateFailure(reason);
+        };
+
+        p.onceAuthCaptured = function(paymentMethod) {
+            this.ultimateSuccess(paymentMethod);
+        };
+
+        p.ultimateSuccess = function(paymentMethod) {
+            console.log(paymentMethod);
+            this.callback(paymentMethod, false);
+        };
+
+        p.ultimateFailure = function(reason) {
+            console.error(reason);
+            this.callback(null, reason);
+        };
+
         return TheClass;
     }());
 
@@ -188,7 +250,100 @@
         p.constructor = TheClass;
 
         p.do = function() {
-            console.log('nothing much');
+            var payload = {
+                "gateway": "Stripe"
+            }
+
+            if(this.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.bfjs.state.api.organizationID;
+            }
+
+            this.doPreAuth(payload);
+        };
+
+        p.oncePreauthed = function(data) {
+            if (!data.results) {
+                this.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
+            }
+            // This identifies your website in the createToken call below
+            var stripePublishableKey = data.results[0].publicKey;
+            Stripe.setPublishableKey(stripePublishableKey);
+            
+            var mappings = {
+                'cardholder-name': 'name',
+                'cvc': 'cvc',
+                'number': 'number',
+                'exp-month': 'exp_month',
+                'exp-year': 'exp_year',
+                'address-line1': 'address_line1',
+                'address-line2': 'address_line2',
+                'address-city': 'address_city',
+                'address-state': 'address_state',
+                'address-zip': 'address_zip',
+                'address-country': 'address_country',
+            };
+            
+            var tokenInfo = {};
+            
+            for (var i in mappings) {
+                var mapping = mappings[i];
+                var valueFromForm = this.bfjs.core.getFormValue(i);
+                if (valueFromForm) {
+                    tokenInfo[mappings[i]] = valueFromForm;
+                }
+            }
+
+            Stripe.card.createToken(tokenInfo, this.gatewayResponseHandler);
+        };
+
+        p.gatewayResponseHandler = function(status, response) {
+            if (response.error) {
+                // Show the errors on the form
+                this.ultimateFailure(response.error.message);
+            } else {
+                // token contains id, last4, and card type
+                var token = response.id;
+                var card = response.card;
+
+                var payload = {
+                    stripeToken: token,
+                    cardID: card.id,
+                    accountID: this.accountID
+                };
+
+                if(this.bfjs.state.api.organizationID != null) {
+                    payload.organizationID = this.bfjs.state.api.organizationID;
+                }
+
+                // and re-submit
+                this.bfjs.doAuthCapture(payload);
+            }
+        };
+
+        return TheClass;
+    }());
+
+    bfjs.BraintreeTransaction = (function() {
+        var TheClass = function() {
+        };
+
+        TheClass.construct = function() {
+            return new this();
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayTransaction();
+        p.constructor = TheClass;
+
+        p.do = function() {
+            var payload = {
+                "gateway": "Braintree"
+            }
+
+            if(bfjs.state.api.organizationID != null) {
+                payload.organizationID = bfjs.state.api.organizationID;
+            }
+
+            this.doPreAuth(payload);
         };
 
         return TheClass;
@@ -269,134 +424,6 @@
         script.src = url;
         document.getElementsByTagName("head")[0].appendChild(script);
     };
-
-    /*bfjs.stripe.do = function(state) {
-    	var payload = {
-    		"gateway": "Stripe"
-    	}
-
-    	if(bfjs.state.api.organizationID != null) {
-        	payload.organizationID = bfjs.state.api.organizationID;
-        }
-
-        bfjs.doPreAuth(payload, bfjs.stripe.key);
-    };
-
-    bfjs.braintree.do = function(state) {
-        var payload = {
-            "gateway": "Braintree"
-        }
-
-        if(bfjs.state.api.organizationID != null) {
-            payload.organizationID = bfjs.state.api.organizationID;
-        }
-
-        bfjs.doPreAuth(payload, bfjs.braintree.key);
-    };
-
-    bfjs.stripe.responseHandler = function(status, response) {
-        if (response.error) {
-            // Show the errors on the form
-            bfjs.ultimateFailure(response.error.message);
-        } else {
-            // token contains id, last4, and card type
-            var token = response.id;
-            var card = response.card;
-
-            var payload = {
-                stripeToken: token,
-                cardID: card.id,
-                accountID: bfjs.state.accountID
-            };
-
-            if(bfjs.state.api.organizationID != null) {
-            	payload.organizationID = bfjs.state.api.organizationID;
-            }
-
-            // and re-submit
-            bfjs.doAuthCapture(payload, bfjs.stripe.key);
-        }
-    };*/
-
-    bfjs.doPreAuth = function(payload, gateway) {
-        var controller = "tokenization/"
-        var endpoint = "pre-auth";
-        var fullURL = bfjs.state.api.url + controller + endpoint;
-        var auth = bfjs.state.api.token;
-        
-        $.support.cors = true;
-        
-        $.ajax({
-                type: "POST",
-                url: fullURL,
-                data: JSON.stringify(payload),
-                contentType: 'application/json',
-                //dataType: 'jsonp',
-                //jsonp: function(data){console.log(data);},
-                crossDomain: true,
-                xhrFields: {
-                    //withCredentials: true
-                },
-                headers: {
-                    'Authorization': 'Bearer '+auth,
-                    //'Access-Control-Allow-Origin': "*",
-                    //'Access-Control-Request-Headers': 'Authorization Access-Control-Allow-Origin'
-                },
-                /*beforeSend: function (xhr) {
-                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth);
-                    xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
-                    xhr.withCredentials = true;
-                },*/
-            })
-        .success(function(data) {
-            bfjs.preAuthSuccessHandler(data, bfjs.stripe.key);
-        })
-        .fail(bfjs.preAuthFailHandler);
-    };
-
-    bfjs.doAuthCapture = function(payload, gateway) {
-        var controller = "tokenization/"
-        var endpoint = "auth-capture";
-        var fullURL = bfjs.state.api.url + controller + endpoint;
-        var auth = bfjs.state.api.token;
-        
-        $.ajax({
-                type: "POST",
-                url: fullURL,
-                data: JSON.stringify(payload),
-                contentType: 'application/json',
-                //dataType: 'jsonp',
-                //jsonp: function(data){console.log(data);},
-                crossDomain: true,
-                xhrFields: {
-                    //withCredentials: true
-                },
-                headers: {
-                    'Authorization': 'Bearer '+auth,
-                    //'Access-Control-Allow-Origin': "*",
-                    //'Access-Control-Request-Headers': 'Authorization Access-Control-Allow-Origin'
-                },
-                /*beforeSend: function (xhr) {
-                    xhr.setRequestHeader ("Authorization", 'Bearer '+auth);
-                    xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
-                    xhr.withCredentials = true;
-                },*/
-            })
-        .success(function(data) {
-            bfjs.authCaptureSuccessHandler(data, bfjs.stripe.key);
-        })
-        .fail(bfjs.authCaptureFailHandler);
-    };
-
-    bfjs.ultimateSuccess = function(paymentMethod) {
-        //console.log(paymentMethod);
-        bfjs.state.callback(paymentMethod, false);
-    };
-
-    bfjs.ultimateFailure = function(reason) {
-        console.error(reason);
-        bfjs.state.callback(null, reason);
-    };
     
     bfjs.core.getFormValue = function(key) {
         var $formElement = bfjs.state.$formElement;
@@ -404,74 +431,12 @@
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
-    /*bfjs.stripe.oncePreauthed = function(data) {
-        if (!data.results) {
-            bfjs.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
-        }
-        // This identifies your website in the createToken call below
-        var stripePublishableKey = data.results[0].publicKey;
-        Stripe.setPublishableKey(stripePublishableKey);
-        
-        var mappings = {
-            'cardholder-name': 'name',
-            'cvc': 'cvc',
-            'number': 'number',
-            'exp-month': 'exp_month',
-            'exp-year': 'exp_year',
-            'address-line1': 'address_line1',
-            'address-line2': 'address_line2',
-            'address-city': 'address_city',
-            'address-state': 'address_state',
-            'address-zip': 'address_zip',
-            'address-country': 'address_country',
-        };
-        
-        var tokenInfo = {};
-        
-        for (var i in mappings) {
-            var mapping = mappings[i];
-            var valueFromForm = bfjs.core.getFormValue(i);
-            if (valueFromForm) {
-                tokenInfo[mappings[i]] = valueFromForm;
-            }
-        }
+    /*bfjs.stripe*/
 
-        Stripe.card.createToken(tokenInfo, bfjs.stripe.responseHandler);
-    };*/
-    
-    bfjs.preAuthSuccessHandler = function(data, gateway) {
-        //console.log(data);
-        try {
-            bfjs[gateway].oncePreauthed(data);
-        } catch(e) {
-            bfjs.ultimateFailure("Preauthorization failed. "+e.message);
-        }
-    };
-
-    bfjs.preAuthFailHandler = function(reason) {
-        // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-        bfjs.ultimateFailure(reason);
-    };
-
-    bfjs.authCaptureSuccessHandler = function(data, gateway) {
-        //console.log(data);
-        try {
-            var paymentMethod = data.results[0];
-            bfjs.ultimateSuccess(paymentMethod);
-        } catch(e) {
-            bfjs.ultimateFailure("Authorized capture failed. "+e.message);
-        }
-    };
-
-    bfjs.authCaptureFailHandler = function(reason) {
-        // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-        bfjs.ultimateFailure(reason);
-    };
-
-    bfjs.captureCardOnSubmit = function(formElementSelector, accountID, callback, targetGateway) {
+    bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
         if (bfjs.core.hasBfCredentials) {
             if (bfjs.core.gatewayChosen){
-                var newTransaction = bfjs.Transaction.construct(bfjs, formElementSelector, accountID, callback, targetGateway);
+                var newTransaction = bfjs.Transaction.construct(bfjs, formElementSelector, targetGateway, accountID, callback);
                 bfjs.core.doWhenReady(newTransaction);
             } else {
                 throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
