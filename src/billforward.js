@@ -27,11 +27,9 @@
         p.loadedCallback = function() {
             this.loaded = true;
 
-            for (var i in this.deferredTransactions) {
-                var transaction = this.deferredTransactions[i];
-                transaction.do();
+            for (var i = this.deferredTransactions.length-1; this.deferredTransactions.length>0; i--) {
+                this.deferredTransactions.splice(i, 1)[0].do();
             }
-            this.deferredTransactions = [];
         };
 
         p.doWhenReady = function(transaction) {
@@ -158,7 +156,7 @@
     })();
 
     bfjs.Transaction = (function() {
-        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback) {
+        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback, cardDetails) {
             this.formElementCandidate = formElementCandidate;
             this.callback = callback;
             this.accountID = accountID;
@@ -166,7 +164,8 @@
             this.bfjs = bfjs;
             this.state = {
                 formElement:  null,
-                $formElement: null
+                $formElement: null,
+                cardDetails: cardDetails
             };
         };
 
@@ -189,34 +188,43 @@
 
         p.do = function() {
             var self = this;
-            $( document ).ready(function() {
-                var $formElement = $(self.formElementCandidate);
-                var formElement = $formElement.get(0);
 
-                if (!(formElement instanceof HTMLElement)) {
-                    throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
-                }
+            var startDance = function() {
+                var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
+                var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
 
-                self.state.formElement = formElement;
-                self.state.$formElement = $formElement;
+                var newGatewayTransaction = transactionClass.construct(transactionClass, self);
+                gatewayInstance.doWhenReady(newGatewayTransaction);
+            };
 
-                $formElement.submit(function(e) {
-                    // Disable the submit button to prevent repeated clicks
-                    $(this).find('button').prop('disabled', true);
+            if (self.state.cardDetails) {
+                startDance();
+            } else {
+                $( document ).ready(function() {
+                    var $formElement = $(self.formElementCandidate);
+                    var formElement = $formElement.get(0);
 
-                    e.preventDefault();
-                    e.stopPropagation();
+                    if (!(formElement instanceof HTMLElement)) {
+                        throw "Expected jQuery object or HTML element. Perhaps the Form hasn't finished loading?";
+                    }
 
-                    var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
-                    var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
+                    self.state.formElement = formElement;
+                    self.state.$formElement = $formElement;
 
-                    var newGatewayTransaction = transactionClass.construct(transactionClass, self);
-                    gatewayInstance.doWhenReady(newGatewayTransaction);
+                    $formElement.submit(function(e) {
+                        // Disable the submit button to prevent repeated clicks
+                        $(this).find('button').prop('disabled', true);
+
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        startDance();
+                    });
+
+                    // ready to go
+                    $formElement.find('button').prop('disabled', false);
                 });
-
-                // ready to go
-                $formElement.find('button').prop('disabled', false);
-            });
+            }
         };
 
         return TheClass;
@@ -454,7 +462,13 @@
             
             for (var i in mappings) {
                 var mapping = mappings[i];
-                var valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                var valueFromForm;
+                if (this.transaction.state.cardDetails) {
+                    valueFromForm = this.transaction.state.cardDetails[i];
+                } else {
+                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                }
+                
                 if (valueFromForm) {
                     tokenInfo[mappings[i]] = valueFromForm;
                 }
@@ -607,14 +621,20 @@
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
-    bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
+    var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
         if (bfjs.core.hasBfCredentials) {
             if (!bfjs.core.gatewayChosen) {
                 bfjs.loadGateways([targetGateway]);
             }
 
             if (bfjs.core.gatewayChosen){
-                var newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, formElementSelector, accountID, callback);
+                var newTransaction;
+                if (cardDetails) {
+                    newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, null, accountID, callback, cardDetails);
+                } else {
+                    newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, formElementSelector, accountID, callback, null);
+                }
+                
                 bfjs.core.doWhenReady(newTransaction);
             } else {
                 throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
@@ -622,6 +642,14 @@
         } else {
             throw "You need to first call bfjs.useAPI() will BillForward credentials";
         }
+    };
+
+    bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
+        return invoke(formElementSelector, null, targetGateway, accountID, callback);
+    };
+
+    bfjs.captureCard = function(cardDetails, targetGateway, accountID, callback) {
+        return invoke(null, cardDetails, targetGateway, accountID, callback);
     };
 
     bfjs.useAPI = function(url, token, organizationID) {
