@@ -202,7 +202,7 @@
 
                 $formElement.submit(function(e) {
                     // Disable the submit button to prevent repeated clicks
-                    $(self).find('button').prop('disabled', true);
+                    $(this).find('button').prop('disabled', true);
 
                     e.preventDefault();
                     e.stopPropagation();
@@ -409,11 +409,13 @@
                 failed = true;
             }
 
-            return this.ultimateFailure({
-                code: 2000,
-                message: "Preauthorization failed. Response received, but expected information was absent.",
-                detailObj: data
-            })
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2000,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
             // This identifies your website in the createToken call below
 
             var stripePublishableKey = data.results[0].publicKey;
@@ -443,7 +445,11 @@
                 }
             }
 
-            Stripe.card.createToken(tokenInfo, this.gatewayResponseHandler);
+            var self = this;
+
+            Stripe.card.createToken(tokenInfo, function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            });
         };
 
         p.gatewayResponseHandler = function(status, response) {
@@ -462,7 +468,7 @@
                 };
 
                 // and re-submit
-                this.transaction.doAuthCapture(payload);
+                this.doAuthCapture(payload);
             }
         };
 
