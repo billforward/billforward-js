@@ -18,6 +18,7 @@
 
             for (var i in this.deferredTransactions) {
                 var transaction = this.deferredTransactions[i];
+                console.log(transaction);
                 transaction.do();
             }
             this.deferredTransactions = [];
@@ -31,7 +32,7 @@
         };
 
         return TheClass;
-    }());
+    })();
 
     bfjs.CoreActor = (function() {
         var TheClass = function() {
@@ -52,7 +53,7 @@
         p.constructor = TheClass;
 
         return TheClass;
-    }());
+    })();
 
     bfjs.GatewayActor = (function() {
         var TheClass = function() {
@@ -68,7 +69,7 @@
         p.constructor = TheClass;
 
         return TheClass;
-    }());
+    })();
 
     bfjs.StripeGateway = (function() {
         var TheClass = function() {
@@ -87,7 +88,7 @@
         p.constructor = TheClass;
 
         return TheClass;
-    }());
+    })();
 
     bfjs.BraintreeGateway = (function() {
         var TheClass = function() {
@@ -105,7 +106,7 @@
         p.constructor = TheClass;
 
         return TheClass;
-    }());
+    })();
 
     bfjs.Transaction = (function() {
         var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback) {
@@ -120,8 +121,8 @@
             };
         };
 
-        TheClass.construct = function() {
-            return new this.apply(this, arguments);
+        TheClass.construct = function(bfjs, targetGateway, formElementCandidate, accountID, callback) {
+            return new this(bfjs, targetGateway, formElementCandidate, accountID, callback);
         };
 
         var p = TheClass.prototype;
@@ -146,10 +147,18 @@
                     e.preventDefault();
                     e.stopPropagation();
 
+                    console.log(self);
+                    console.log(self.bfjs);
+                    console.log(self.targetGateway);
+
                     var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
+
+                    console.log(transactionClass);
                     var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
 
-                    var newGatewayTransaction = transactionClass.construct(transactionClass);
+                    var newGatewayTransaction = transactionClass.construct(transactionClass, self);
+
+                    console.log(newGatewayTransaction);
                     gatewayInstance.doWhenReady(newGatewayTransaction);
                 });
 
@@ -159,24 +168,32 @@
         };
 
         return TheClass;
-    }());
+    })();
 
     bfjs.GatewayTransaction = (function() {
-        var TheClass = function(myGateway) {
+        var _parent = bfjs.LateActor;
+
+        var TheClass = function(myGateway, transaction) {
             this.myGateway = myGateway;
+            this.transaction = transaction;
         };
 
-        TheClass.construct = function(myGateway) {
-            return new this(myGateway);
+        TheClass.construct = function(myGateway, transaction) {
+            return new this(myGateway, transaction);
         };
 
-        var p = TheClass.prototype = new bfjs.Transaction();
+        var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
-        TheClass.buildBFAjax = function(payload, endpoint) {
+        p.buildBFAjax = function(payload, endpoint) {
             var controller = "tokenization/"
-            var fullURL = bfjs.state.api.url + controller + endpoint;
-            var auth = bfjs.state.api.token;
+
+            var fullURL = this.transaction.bfjs.state.api.url + controller + endpoint;
+            var auth = this.transaction.bfjs.state.api.token;
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
 
             var ajaxObj = {
                 type: "POST",
@@ -194,21 +211,33 @@
         p.doPreAuth = function(payload, gateway) {
             var endpoint = "pre-auth";
 
-            var ajaxObj = TheClass.buildBFAjax(payload, endpoint);
+            var ajaxObj = this.buildBFAjax(payload, endpoint);
+
+            var self = this;
             
             $.ajax(ajaxObj)
-            .success(this.oncePreauthed)
-            .fail(this.preAuthFailHandler);
+            .success(function() {
+                self.oncePreauthed.apply(self, arguments);
+            })
+            .fail(function() {
+                self.preAuthFailHandler.apply(self, arguments);
+            });
         };
 
         p.doAuthCapture = function(payload, gateway) {
             var endpoint = "auth-capture";
 
-            var ajaxObj = TheClass.buildBFAjax(payload, endpoint);
+            var ajaxObj = this.buildBFAjax(payload, endpoint);
+
+            var self = this;
             
             $.ajax(ajaxObj)
-            .success(this.onceAuthCaptured)
-            .fail(this.authCaptureFailHandler);
+            .success(function() {
+                self.onceAuthCaptured.apply(self, arguments);
+            })
+            .fail(function() {
+                self.authCaptureFailHandler.apply(self, arguments);
+            });
         };
 
         p.preAuthFailHandler = function(reason) {
@@ -227,35 +256,49 @@
 
         p.ultimateSuccess = function(paymentMethod) {
             console.log(paymentMethod);
-            this.callback(paymentMethod, false);
+            this.transaction.callback(paymentMethod, false);
         };
 
         p.ultimateFailure = function(reason) {
             console.error(reason);
-            this.callback(null, reason);
+            this.transaction.callback(null, reason);
         };
 
         return TheClass;
-    }());
+    })();
 
     bfjs.StripeTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
         var TheClass = function() {
+            // basically call super(arguments)
+            _parent.apply(this, arguments);
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
-        var p = TheClass.prototype = new bfjs.GatewayTransaction();
+        var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         p.do = function() {
             var payload = {
                 "gateway": "Stripe"
             }
 
-            if(this.bfjs.state.api.organizationID != null) {
-                payload.organizationID = this.bfjs.state.api.organizationID;
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
             this.doPreAuth(payload);
@@ -287,7 +330,7 @@
             
             for (var i in mappings) {
                 var mapping = mappings[i];
-                var valueFromForm = this.bfjs.core.getFormValue(i);
+                var valueFromForm = this.transaction.bfjs.core.getFormValue(i);
                 if (valueFromForm) {
                     tokenInfo[mappings[i]] = valueFromForm;
                 }
@@ -311,17 +354,13 @@
                     accountID: this.accountID
                 };
 
-                if(this.bfjs.state.api.organizationID != null) {
-                    payload.organizationID = this.bfjs.state.api.organizationID;
-                }
-
                 // and re-submit
-                this.bfjs.doAuthCapture(payload);
+                this.transaction.doAuthCapture(payload);
             }
         };
 
         return TheClass;
-    }());
+    })();
 
     bfjs.BraintreeTransaction = (function() {
         var TheClass = function() {
@@ -347,7 +386,7 @@
         };
 
         return TheClass;
-    }());
+    })();
 
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
@@ -358,7 +397,8 @@
     };
 
     bfjs.gatewayTransactionClasses = {
-        'stripe': bfjs.StripeTransaction
+        'stripe': bfjs.StripeTransaction,
+        'braintree': bfjs.BraintreeTransaction
     };
 
     bfjs.lateActors = [
@@ -431,12 +471,14 @@
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
-    /*bfjs.stripe*/
-
     bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
         if (bfjs.core.hasBfCredentials) {
+            if (!bfjs.core.gatewayChosen) {
+                bfjs.loadGateways([targetGateway]);
+            }
+
             if (bfjs.core.gatewayChosen){
-                var newTransaction = bfjs.Transaction.construct(bfjs, formElementSelector, targetGateway, accountID, callback);
+                var newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, formElementSelector, accountID, callback);
                 bfjs.core.doWhenReady(newTransaction);
             } else {
                 throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
@@ -473,4 +515,4 @@
     };
 
     window.BillForward = window.BillForward || bfjs;
-}());
+})();
