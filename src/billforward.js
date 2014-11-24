@@ -7,11 +7,22 @@
             this.deferredTransactions = [];
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype;
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         p.loadedCallback = function() {
             this.loaded = true;
@@ -45,12 +56,22 @@
             this.depName = "jQuery";
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype = new bfjs.LateActor();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         return TheClass;
     })();
@@ -61,12 +82,22 @@
             this.loadMe = false;
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype = new bfjs.LateActor();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         return TheClass;
     })();
@@ -79,13 +110,22 @@
             this.depName = "Stripe";
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype = new bfjs.GatewayActor();
-
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         return TheClass;
     })();
@@ -98,12 +138,22 @@
             this.depName = "braintree";
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype = new bfjs.GatewayActor();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         return TheClass;
     })();
@@ -121,11 +171,22 @@
             };
         };
 
-        TheClass.construct = function(bfjs, targetGateway, formElementCandidate, accountID, callback) {
-            return new this(bfjs, targetGateway, formElementCandidate, accountID, callback);
-        };
-
         var p = TheClass.prototype;
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         p.do = function() {
             var self = this;
@@ -178,12 +239,22 @@
             this.transaction = transaction;
         };
 
-        TheClass.construct = function(myGateway, transaction) {
-            return new this(myGateway, transaction);
-        };
-
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         p.buildBFAjax = function(payload, endpoint) {
             var controller = "tokenization/"
@@ -366,12 +437,22 @@
         var TheClass = function() {
         };
 
-        TheClass.construct = function() {
-            return new this();
-        };
-
         var p = TheClass.prototype = new bfjs.GatewayTransaction();
         p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
 
         p.do = function() {
             var payload = {
