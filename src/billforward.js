@@ -29,7 +29,6 @@
 
             for (var i in this.deferredTransactions) {
                 var transaction = this.deferredTransactions[i];
-                console.log(transaction);
                 transaction.do();
             }
             this.deferredTransactions = [];
@@ -208,18 +207,10 @@
                     e.preventDefault();
                     e.stopPropagation();
 
-                    console.log(self);
-                    console.log(self.bfjs);
-                    console.log(self.targetGateway);
-
                     var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
-
-                    console.log(transactionClass);
                     var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
 
                     var newGatewayTransaction = transactionClass.construct(transactionClass, self);
-
-                    console.log(newGatewayTransaction);
                     gatewayInstance.doWhenReady(newGatewayTransaction);
                 });
 
@@ -311,14 +302,45 @@
             });
         };
 
-        p.preAuthFailHandler = function(reason) {
-            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-            this.ultimateFailure(reason);
+        p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown) {
+            /* Errors:
+            Connecting to BillForward:
+            1xxx - Failure to connect
+            10xx --- Failure to reach server
+            1000 ----- (Generic)
+            11xx --- Access denied
+            110x ----- Access token invalid
+            1100 ------- (Generic)
+            111x ----- Privilege failure
+            1110 ------- (Generic)
+            1111 ------- Access token valid, but BillForward role lacks privilege
+
+            Preauthorization:
+            20xx - Preauthorization failed
+            200x --- Expected information absent
+            2000 ----- (Generic)
+            201x --- Precondition failed
+            */
+
+            return {
+                code: 1000,
+                message: "Failed to connect to BillForward.",
+                detailObj: jqXHR
+            };
         };
 
-        p.authCaptureFailHandler = function(reason) {
+        p.preAuthFailHandler = function(jqXHR, textStatus, errorThrown) {
+            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown);
+
             // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-            this.ultimateFailure(reason);
+            this.ultimateFailure(bfjsError);
+        };
+
+        p.authCaptureFailHandler = function(jqXHR, textStatus, errorThrown) {
+            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown);
+
+            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+            this.ultimateFailure(bfjsError);
         };
 
         p.onceAuthCaptured = function(paymentMethod) {
@@ -376,10 +398,24 @@
         };
 
         p.oncePreauthed = function(data) {
-            if (!data.results) {
-                this.ultimateFailure("Preauthorization failed. Response received, but with no prauth information in it.");
+            var stripePublishableKey;
+            var failed = false;
+            try {
+                stripePublishableKey = data.results[0].publicKey;
+                if (!data.results[0].publicKey) {
+                    failed = true;
+                }   
+            } catch (e){
+                failed = true;
             }
+
+            return this.ultimateFailure({
+                code: 2000,
+                message: "Preauthorization failed. Response received, but expected information was absent.",
+                detailObj: data
+            })
             // This identifies your website in the createToken call below
+
             var stripePublishableKey = data.results[0].publicKey;
             Stripe.setPublishableKey(stripePublishableKey);
             
@@ -401,7 +437,7 @@
             
             for (var i in mappings) {
                 var mapping = mappings[i];
-                var valueFromForm = this.transaction.bfjs.core.getFormValue(i);
+                var valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                 if (valueFromForm) {
                     tokenInfo[mappings[i]] = valueFromForm;
                 }
@@ -546,9 +582,7 @@
         document.getElementsByTagName("head")[0].appendChild(script);
     };
     
-    bfjs.core.getFormValue = function(key) {
-        var $formElement = bfjs.state.$formElement;
-        
+    bfjs.core.getFormValue = function(key, $formElement) {        
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
     };
 
