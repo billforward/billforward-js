@@ -304,26 +304,41 @@
 
         p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown) {
             /* Errors:
+            I have starred the errors that I have so far implemented.
+            The rest are proposed.
+
+            The 0th of any group 'x' is a 'generic' catch-all for that group.
+
+            You could search for the 'failure to connect' group using:
+                code >= 1000 && code < 2000
+
+            Special:
+                0    - Uncategorized error
+
             Connecting to BillForward:
-            1xxx - Failure to connect
-            10xx --- Failure to reach server
-            1000 ----- (Generic)
-            11xx --- Access denied
-            110x ----- Access token invalid
-            1100 ------- (Generic)
-            111x ----- Privilege failure
-            1110 ------- (Generic)
-            1111 ------- Access token valid, but BillForward role lacks privilege
+                1xxx - Failure to connect
+                1000 ----- (Generic)
+                11xx --- Failure to reach server
+              * 1100 ----- (Generic)
+                12xx --- Access denied
+                1200 ----- (Generic)
+                121x ----- Access token invalid
+                1210 ------- (Generic)
+                122x ----- Privilege failure
+                1220 ------- (Generic)
+                1221 ------- Access token valid, but BillForward role lacks privilege
 
             Preauthorization:
-            20xx - Preauthorization failed
-            200x --- Expected information absent
-            2000 ----- (Generic)
-            201x --- Precondition failed
+                20xx - Preauthorization failed
+                2000 --- (Generic)
+                201x --- Expected information absent
+              * 2010 ----- (Generic)
+                202x --- Precondition failed
+                2020 ----- (Generic)
             */
 
             return {
-                code: 1000,
+                code: 1100,
                 message: "Failed to connect to BillForward.",
                 detailObj: jqXHR
             };
@@ -411,7 +426,7 @@
 
             if (failed) {
                 return this.ultimateFailure({
-                    code: 2000,
+                    code: 2010,
                     message: "Preauthorization failed. Response received, but expected information was absent.",
                     detailObj: data
                 });
