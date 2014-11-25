@@ -155,18 +155,8 @@
         return TheClass;
     })();
 
-    bfjs.Transaction = (function() {
-        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback, cardDetails) {
-            this.formElementCandidate = formElementCandidate;
-            this.callback = callback;
-            this.accountID = accountID;
-            this.targetGateway = targetGateway;
-            this.bfjs = bfjs;
-            this.state = {
-                formElement:  null,
-                $formElement: null,
-                cardDetails: cardDetails
-            };
+    bfjs.TransactionBase = (function() {
+        var TheClass = function() {
         };
 
         var p = TheClass.prototype;
@@ -186,19 +176,56 @@
             }
         })();
 
+        return TheClass;
+    })();
+
+    bfjs.Transaction = (function() {
+        var _parent = bfjs.TransactionBase;
+
+        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback, cardDetails) {
+            _parent.apply(this, arguments);
+            this.formElementCandidate = formElementCandidate;
+            this.callback = callback;
+            this.accountID = accountID;
+            this.targetGateway = targetGateway;
+            this.bfjs = bfjs;
+            this.state = {
+                formElement:  null,
+                $formElement: null,
+                cardDetails: cardDetails
+            };
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
         p.do = function() {
             var self = this;
 
-            var startDance = function() {
-                var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
-                var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
+            var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
+            var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
 
-                var newGatewayTransaction = transactionClass.construct(transactionClass, self);
-                gatewayInstance.doWhenReady(newGatewayTransaction);
-            };
+            var newGatewayTransaction = transactionClass.construct(transactionClass, self);
+            gatewayInstance.doWhenReady(newGatewayTransaction);
+
+            newGatewayTransaction.doPageLoadDanceWhenReady();
 
             if (self.state.cardDetails) {
-                startDance();
+                newGatewayTransaction.doSubmitDanceWhenReady();
             } else {
                 $( document ).ready(function() {
                     var $formElement = $(self.formElementCandidate);
@@ -218,7 +245,7 @@
                         e.preventDefault();
                         e.stopPropagation();
 
-                        startDance();
+                        newGatewayTransaction.doSubmitDanceWhenReady();
                     });
 
                     // ready to go
@@ -230,7 +257,7 @@
         return TheClass;
     })();
 
-    bfjs.GatewayTransaction = (function() {
+    bfjs.GatewayTransactionBase = (function() {
         var _parent = bfjs.LateActor;
 
         var TheClass = function(myGateway, transaction) {
@@ -278,7 +305,7 @@
             return ajaxObj;
         };
 
-        p.doPreAuth = function(payload, gateway) {
+        p.doPreAuth = function(payload) {
             var endpoint = "pre-auth";
 
             var ajaxObj = this.buildBFAjax(payload, endpoint);
@@ -287,14 +314,14 @@
             
             $.ajax(ajaxObj)
             .success(function() {
-                self.oncePreauthed.apply(self, arguments);
+                self.preAuthSuccessHandler.apply(self, arguments);
             })
             .fail(function() {
                 self.preAuthFailHandler.apply(self, arguments);
             });
         };
 
-        p.doAuthCapture = function(payload, gateway) {
+        p.doAuthCapture = function(payload) {
             var endpoint = "auth-capture";
 
             var ajaxObj = this.buildBFAjax(payload, endpoint);
@@ -303,14 +330,14 @@
             
             $.ajax(ajaxObj)
             .success(function() {
-                self.onceAuthCaptured.apply(self, arguments);
+                self.authCaptureSuccessHandler.apply(self, arguments);
             })
             .fail(function() {
                 self.authCaptureFailHandler.apply(self, arguments);
             });
         };
 
-        p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown) {
+        p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown, phase) {
             /* Errors:
             I have starred the errors that I have so far implemented.
             The rest are proposed.
@@ -345,25 +372,48 @@
                 2020 ----- (Generic)
             */
 
-            return {
-                code: 1100,
-                message: "Failed to connect to BillForward.",
+            var error = {
                 detailObj: jqXHR
             };
+
+            if (jqXHR.status === 400) {
+                if (phase === "pre") {
+                    error.code = 2000;
+                    error.message = "Preauthorization failed.";
+                } else {
+                    error.code = 0;
+                    error.message = "Auth-capture failed.";
+                }
+            } else {
+                error.code = 1100;
+                error.message = "Failed to connect to BillForward.";
+            }
+
+            return error;
         };
 
         p.preAuthFailHandler = function(jqXHR, textStatus, errorThrown) {
-            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown);
+            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown, "pre");
 
             // maybe should only go to ultimate failure if ALL gateways fail to tokenize
             this.ultimateFailure(bfjsError);
         };
 
         p.authCaptureFailHandler = function(jqXHR, textStatus, errorThrown) {
-            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown);
+            var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown, "capture");
 
             // maybe should only go to ultimate failure if ALL gateways fail to tokenize
             this.ultimateFailure(bfjsError);
+        };
+
+        p.preAuthSuccessHandler = function(data) {
+            this.preAuthResponsePayload = data;
+
+            this.submitDancer.loadedCallback();
+        };
+
+        p.authCaptureSuccessHandler = function(paymentMethod) {
+            this.onceAuthCaptured(paymentMethod);
         };
 
         p.onceAuthCaptured = function(paymentMethod) {
@@ -383,11 +433,45 @@
         return TheClass;
     })();
 
+    bfjs.GatewayTransaction = (function() {
+        var _parent = bfjs.GatewayTransactionBase;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+            this.pageLoadDancer = this.makeDancer();
+            this.submitDancer = this.makeDancer();
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p.makeDancer = function() {
+            var dancer = bfjs.LateActor.construct();
+            dancer.troupeLeader = this;
+            return dancer;
+        };
+
+        return TheClass;
+    })();
+
     bfjs.StripeTransaction = (function() {
         var _parent = bfjs.GatewayTransaction;
 
         var TheClass = function() {
-            // basically call super(arguments)
             _parent.apply(this, arguments);
         };
 
@@ -417,10 +501,35 @@
                 payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
-            this.doPreAuth(payload);
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
         };
 
-        p.oncePreauthed = function(data) {
+        p.doPageLoadDanceWhenReady = function() {
+            var self = this;
+
+            var deferredTransaction = bfjs.TransactionBase.construct();
+            deferredTransaction.do = function() {
+                self.doPreAuth(self.preAuthRequestPayload);
+            };
+
+            this.pageLoadDancer.doWhenReady(deferredTransaction);
+        };
+
+        p.doSubmitDanceWhenReady = function() {
+            var self = this;
+
+            var deferredTransaction = bfjs.TransactionBase.construct();
+            deferredTransaction.do = function() {
+                self.startAuthCapture(self.preAuthResponsePayload);
+            };
+
+            this.submitDancer.doWhenReady(deferredTransaction);
+        };
+
+        p.startAuthCapture = function(data) {
             var stripePublishableKey;
             var failed = false;
             try {
