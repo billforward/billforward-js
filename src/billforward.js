@@ -586,7 +586,9 @@
         }
 
         for (var i = 0; i<queue.length; i++) {
-            bfjs.loadScript(queue[i].src, queue[i].callback, queue[i].actor);
+            if (queue[i].actor.loadMe) {
+                bfjs.loadScript(queue[i].src, queue[i].callback, queue[i].actor);   
+            }
         }
     };
 
