@@ -465,6 +465,28 @@
             return dancer;
         };
 
+        p.doPageLoadDanceWhenReady = function() {
+            var self = this;
+
+            var deferredTransaction = bfjs.TransactionBase.construct();
+            deferredTransaction.do = function() {
+                self.doPreAuth(self.preAuthRequestPayload);
+            };
+
+            this.pageLoadDancer.doWhenReady(deferredTransaction);
+        };
+
+        p.doSubmitDanceWhenReady = function() {
+            var self = this;
+
+            var deferredTransaction = bfjs.TransactionBase.construct();
+            deferredTransaction.do = function() {
+                self.startAuthCapture(self.preAuthResponsePayload);
+            };
+
+            this.submitDancer.doWhenReady(deferredTransaction);
+        };
+
         return TheClass;
     })();
 
@@ -505,28 +527,6 @@
 
             // ready to do pageLoadDo
             this.pageLoadDancer.loadedCallback();
-        };
-
-        p.doPageLoadDanceWhenReady = function() {
-            var self = this;
-
-            var deferredTransaction = bfjs.TransactionBase.construct();
-            deferredTransaction.do = function() {
-                self.doPreAuth(self.preAuthRequestPayload);
-            };
-
-            this.pageLoadDancer.doWhenReady(deferredTransaction);
-        };
-
-        p.doSubmitDanceWhenReady = function() {
-            var self = this;
-
-            var deferredTransaction = bfjs.TransactionBase.construct();
-            deferredTransaction.do = function() {
-                self.startAuthCapture(self.preAuthResponsePayload);
-            };
-
-            this.submitDancer.doWhenReady(deferredTransaction);
         };
 
         p.startAuthCapture = function(data) {
@@ -614,10 +614,13 @@
     })();
 
     bfjs.BraintreeTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
         var TheClass = function() {
+            _parent.apply(this, arguments);
         };
 
-        var p = TheClass.prototype = new bfjs.GatewayTransaction();
+        var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
@@ -644,6 +647,9 @@
             }
 
             this.doPreAuth(payload);
+        };
+
+        p.startAuthCapture = function(data) {
         };
 
         return TheClass;
