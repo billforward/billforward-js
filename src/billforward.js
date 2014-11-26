@@ -853,7 +853,7 @@
                 var payload = {
                     '@type': 'BraintreeAuthCaptureRequest',
                     gateway: "Braintree",
-                    nonce: nonce,
+                    paymentMethodNonce: nonce,
                     accountID: this.transaction.accountID
                 };
 
