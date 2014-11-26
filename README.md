@@ -21,10 +21,8 @@ The code you write is the same, regardless of payment gateway. This makes it tri
 Currently supported:
 
 `stripe`
-
-In development:
-
 `braintree`
+`braintree+paypal`
 
 ###Initialize
 
@@ -92,12 +90,15 @@ cvc
 number
 exp-month
 exp-year
+exp-date
 address-line1
 address-line2
 address-city
 address-state
 address-zip
 address-country
+first-name
+last-name
 ```
 
 ###Invoke card capture
@@ -308,4 +309,4 @@ BillForward.captureCard(cardDetails, 'stripe', accountID, callback);
 Each entry in the cardDetails object is equivalent to passing in a `bf-data` attribute of the same name.
 
 ###Example checkout
-See SimpleCheckout.html for an example of a full worked checkout.
+See the 'examples' folder for examples of full worked checkouts.
