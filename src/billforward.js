@@ -372,6 +372,16 @@
               * 2010 ----- (Generic)
                 202x --- Precondition failed
                 2020 ----- (Generic)
+
+            Client-side tokenization of card with gateway:
+                30xx - Tokenization failed
+                3000 --- (Generic)
+
+            Authorized card capture:
+                40xx - Card capture failed
+                4000 --- (Generic)
+                401x --- Card declined
+                4010 ----- (Generic)
             */
 
             var error = {
@@ -383,8 +393,16 @@
                     error.code = 2000;
                     error.message = "Preauthorization failed.";
                 } else {
-                    error.code = 0;
+                    error.code = 4000;
                     error.message = "Auth-capture failed.";
+                    if (jqXHR.responseJSON) {
+                        if (jqXHR.responseJSON.errorMessage) {
+                            if (jqXHR.responseJSON.errorMessage === 'Your card was declined.') {
+                                error.code = 4010;
+                                error.message = "Your card was declined.";
+                            }
+                        }
+                    }
                 }
             } else {
                 error.code = 1100;
@@ -598,8 +616,13 @@
 
         p.gatewayResponseHandler = function(status, response) {
             if (response.error) {
+                var bfjsError = {
+                    code: 3000,
+                    message: "Card capture to Stripe failed.",
+                    detailObj: response
+                };
                 // Show the errors on the form
-                this.ultimateFailure(response.error.message);
+                this.ultimateFailure(bfjsError);
             } else {
                 // token contains id, last4, and card type
                 var token = response.id;
@@ -762,6 +785,8 @@
 
             var self = this;
 
+            console.log(tokenInfo);
+
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
                 self.gatewayResponseHandler.apply(self, arguments);
@@ -769,9 +794,15 @@
         };
 
         p.gatewayResponseHandler = function(err, nonce) {
+            console.log(err, nonce);
             if (err) {
+                var bfjsError = {
+                    code: 3000,
+                    message: "Card capture to Braintree failed.",
+                    detailObj: err
+                };
                 // Show the errors on the form
-                this.ultimateFailure(err);
+                this.ultimateFailure(bfjsError);
             } else {
                 var payload = {
                     nonce: nonce,
@@ -889,7 +920,7 @@
     };
 
     var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
-        var resolvedGateway = bfjs.resolveGatewayName(targetGateway);
+        var resolvedGateway = bfjs.resolveGatewayName(targetGateway, cardDetails);
 
         if (bfjs.core.hasBfCredentials) {
             if (!bfjs.core.gatewayChosen) {
@@ -934,13 +965,16 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
-    bfjs.resolveGatewayName = function(name) {
+    bfjs.resolveGatewayName = function(name, cardDetails) {
         var lowerCase = name.toLowerCase();
         var resolved = lowerCase;
         if (resolved === 'braintree+paypal') {
             resolved = 'braintree';
             if (!bfjs.gatewayInstances[resolved].usePaypal) {
-                throw "You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button"
+                throw "You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button";
+            }
+            if (cardDetails) {
+                throw "Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway."
             }
         }
 
