@@ -501,6 +501,20 @@
             _parent.apply(this, arguments);
         };
 
+        TheClass.mappings = {
+            'cardholder-name': 'name',
+            'cvc': 'cvc',
+            'number': 'number',
+            'exp-month': 'exp_month',
+            'exp-year': 'exp_year',
+            'address-line1': 'address_line1',
+            'address-line2': 'address_line2',
+            'address-city': 'address_city',
+            'address-state': 'address_state',
+            'address-zip': 'address_zip',
+            'address-country': 'address_country',
+        };
+
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
@@ -557,24 +571,10 @@
             var stripePublishableKey = data.results[0].publicKey;
             Stripe.setPublishableKey(stripePublishableKey);
             
-            var mappings = {
-                'cardholder-name': 'name',
-                'cvc': 'cvc',
-                'number': 'number',
-                'exp-month': 'exp_month',
-                'exp-year': 'exp_year',
-                'address-line1': 'address_line1',
-                'address-line2': 'address_line2',
-                'address-city': 'address_city',
-                'address-state': 'address_state',
-                'address-zip': 'address_zip',
-                'address-country': 'address_country',
-            };
-            
             var tokenInfo = {};
             
-            for (var i in mappings) {
-                var mapping = mappings[i];
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
                 var valueFromForm;
                 if (this.transaction.state.cardDetails) {
                     valueFromForm = this.transaction.state.cardDetails[i];
@@ -583,7 +583,7 @@
                 }
                 
                 if (valueFromForm) {
-                    tokenInfo[mappings[i]] = valueFromForm;
+                    tokenInfo[TheClass.mappings[i]] = valueFromForm;
                 }
             }
 
@@ -622,6 +622,16 @@
 
         var TheClass = function() {
             _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+            'cardholder-name': 'cardholder_name',
+            'cvc': 'cvv',
+            'number': 'number',
+            'exp-date': 'expiration_date',
+            'exp-month': 'expiration_month',
+            'exp-year': 'expiration_year',
+            'address-zip': 'postal_code'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -681,7 +691,10 @@
                 });
             }
 
-            if (!this.transaction.state.cardDetails) {
+            if (this.transaction.state.cardDetails) {
+                // programmatic tokenization requires no setup.
+                // doesn't support PayPal button though
+            } else {
                 var $formElement = this.transaction.state.$formElement;
 
                 var itsId = $formElement.attr('id');
@@ -693,6 +706,11 @@
                     itsId = uniqueId;
                 }
 
+                for (var i in TheClass.mappings) {
+                    var mapping = TheClass.mappings[i];
+                    bfjs.core.translateFormValue(i, this.transaction.state.$formElement, 'data-braintree-name', mapping);
+                }
+
                 braintree.setup(clientToken, "custom", {id: itsId});
             }
 
@@ -700,39 +718,28 @@
         };
 
         p.startAuthCapture = function(data) {
-            var mappings = {
-                'cardholder-name': 'cardholder_name',
-                'cvc': 'cvv',
-                'number': 'number',
-                'exp-date': 'expiration_date',
-                'exp-month': 'expiration_month',
-                'exp-year': 'expiration_year',
-                'address-zip': 'postal_code'
-            };
+            if (this.transaction.state.cardDetails) {
+                var tokenInfo = {};
 
-            var tokenInfo = {};
-
-            //{number: "4111111111111111", expirationDate: "10/20"}
-            for (var i in mappings) {
-                var mapping = mappings[i];
-                var valueFromForm;
-                if (this.transaction.state.cardDetails) {
+                for (var i in TheClass.mappings) {
+                    var mapping = TheClass.mappings[i];
+                    var valueFromForm;
                     valueFromForm = this.transaction.state.cardDetails[i];
-                } else {
-                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    
+                    if (valueFromForm) {
+                        tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
                 }
-                
-                if (valueFromForm) {
-                    tokenInfo[mappings[i]] = valueFromForm;
-                }
+
+                var self = this;
+
+                var client = new braintree.api.Client({clientToken: this.clientToken});
+                client.tokenizeCard(tokenInfo, function() {
+                    self.gatewayResponseHandler.apply(self, arguments);
+                });
+            } else {
+                // submit was already bound at preauth
             }
-
-            var self = this;
-
-            var client = new braintree.api.Client({clientToken: this.clientToken});
-            client.tokenizeCard(tokenInfo, function() {
-                self.gatewayResponseHandler.apply(self, arguments);
-            });
         };
 
         p.gatewayResponseHandler = function(err, nonce) {
@@ -836,9 +843,28 @@
         script.src = url;
         document.getElementsByTagName("head")[0].appendChild(script);
     };
+
+    bfjs.core.getFormInput = function(key, $formElement) {        
+        return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']");
+    };
+
+    bfjs.core.valueFromFormInput = function($formInput) {        
+        return $formInput.val();
+    };
     
-    bfjs.core.getFormValue = function(key, $formElement) {        
-        return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']").val();
+    bfjs.core.getFormValue = function(key, $formElement) {
+        var $input = bfjs.core.getFormInput(key, $formElement);
+        var value = bfjs.core.valueFromFormInput($input);
+        return value;
+    };
+
+    bfjs.core.translateFormValue = function(key, $formElement, newAttr, newKey) {
+        var $input = bfjs.core.getFormInput(key, $formElement);
+        var value = bfjs.core.valueFromFormInput($input);
+
+        if (value) {
+            $input.attr(newAttr, newKey);
+        }
     };
 
     var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
