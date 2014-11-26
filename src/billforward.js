@@ -554,6 +554,7 @@
 
         p.do = function() {
             var payload = {
+                "@type": "StripePreAuthRequest",
                 "gateway": "Stripe"
             }
 
@@ -699,6 +700,7 @@
 
         p.do = function() {
             var payload = {
+                "@type": "BraintreePreAuthRequest",
                 "gateway": "Braintree"
             }
 
