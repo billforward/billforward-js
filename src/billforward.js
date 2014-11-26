@@ -409,11 +409,15 @@
         p.preAuthSuccessHandler = function(data) {
             this.preAuthResponsePayload = data;
 
-            this.submitDancer.loadedCallback();
+            this.oncePreAuthed();
         };
 
         p.authCaptureSuccessHandler = function(paymentMethod) {
             this.onceAuthCaptured(paymentMethod);
+        };
+
+        p.oncePreAuthed = function() {
+            this.submitDancer.loadedCallback();
         };
 
         p.onceAuthCaptured = function(paymentMethod) {
@@ -646,10 +650,109 @@
                 payload.organizationID = bfjs.state.api.organizationID;
             }
 
-            this.doPreAuth(payload);
+            this.preAuthRequestPayload = payload;
+
+            //this.doPreAuth(payload);
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.oncePreAuthed = function() {
+            var data = this.preAuthResponsePayload;
+            var clientToken;
+            var failed = false;
+            try {
+                clientToken = data.results[0].clientToken;
+                if (!data.results[0].clientToken) {
+                    failed = true;
+                }   
+            } catch (e){
+                failed = true;
+            }
+
+            this.clientToken = clientToken;
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+
+            if (!this.transaction.state.cardDetails) {
+                var $formElement = this.transaction.state.$formElement;
+
+                var itsId = $formElement.attr('id');
+
+                if (!itsId) {
+                    // attribute does not exist
+                    var uniqueId = "bf-payment-form-unique-id";
+                    $formElement.attr('id', uniqueId);
+                    itsId = uniqueId;
+                }
+
+                braintree.setup(clientToken, "custom", {id: itsId});
+            }
+
+            this.submitDancer.loadedCallback();
         };
 
         p.startAuthCapture = function(data) {
+            var mappings = {
+                'cardholder-name': 'cardholder_name',
+                'cvc': 'cvv',
+                'number': 'number',
+                'exp-date': 'expiration_date',
+                'exp-month': 'expiration_month',
+                'exp-year': 'expiration_year',
+                'address-zip': 'postal_code'
+            };
+
+            var tokenInfo = {};
+
+            //{number: "4111111111111111", expirationDate: "10/20"}
+            for (var i in mappings) {
+                var mapping = mappings[i];
+                var valueFromForm;
+                if (this.transaction.state.cardDetails) {
+                    valueFromForm = this.transaction.state.cardDetails[i];
+                } else {
+                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                }
+                
+                if (valueFromForm) {
+                    tokenInfo[mappings[i]] = valueFromForm;
+                }
+            }
+
+            var self = this;
+
+            var client = new braintree.api.Client({clientToken: this.clientToken});
+            client.tokenizeCard(tokenInfo, function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            });
+        };
+
+        p.gatewayResponseHandler = function(err, nonce) {
+            if (response.error) {
+                // Show the errors on the form
+                this.ultimateFailure(response.error.message);
+            } else {
+                // token contains id, last4, and card type
+                var token = response.id;
+                var card = response.card;
+
+                var payload = {
+                    stripeToken: token,
+                    cardID: card.id,
+                    accountID: this.accountID
+                };
+
+                // and re-submit
+                this.doAuthCapture(payload);
+            }
         };
 
         return TheClass;
