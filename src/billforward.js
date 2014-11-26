@@ -778,7 +778,7 @@
 
         p.startAuthCapture = function(data) {
             var nonceValue;
-            if (this.myGateway.usePaypal) {
+            if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
                 // check for a nonce
                 var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
