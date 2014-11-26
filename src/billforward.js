@@ -133,6 +133,8 @@
             this.key = 'braintree';
             this.depUrl = "https://assets.braintreegateway.com/v2/braintree.js";
             this.depName = "braintree";
+            this.usePaypal = false;
+            this.paypalButtonSelector = null;
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -219,7 +221,7 @@
             var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
             var gatewayInstance = self.bfjs.gatewayInstances[self.targetGateway];
 
-            var newGatewayTransaction = transactionClass.construct(transactionClass, self);
+            var newGatewayTransaction = transactionClass.construct(gatewayInstance, self);
             gatewayInstance.doWhenReady(newGatewayTransaction);
 
             newGatewayTransaction.doPageLoadDanceWhenReady();
@@ -697,13 +699,13 @@
             } else {
                 var $formElement = this.transaction.state.$formElement;
 
-                var itsId = $formElement.attr('id');
+                var formId = $formElement.attr('id');
 
-                if (!itsId) {
+                if (!formId) {
                     // attribute does not exist
                     var uniqueId = "bf-payment-form-unique-id";
                     $formElement.attr('id', uniqueId);
-                    itsId = uniqueId;
+                    formId = uniqueId;
                 }
 
                 for (var i in TheClass.mappings) {
@@ -711,49 +713,68 @@
                     bfjs.core.translateFormValue(i, this.transaction.state.$formElement, 'data-braintree-name', mapping);
                 }
 
-                braintree.setup(clientToken, "custom", {id: itsId});
+                if (this.myGateway.usePaypal) {
+                    var $paypalSelector = $(this.myGateway.paypalButtonSelector);
+                    var paypalDivId = $paypalSelector.attr('id');
+
+                    if (!paypalDivId) {
+                        // attribute does not exist
+                        var uniqueId = "bf-braintree-paypal-unique-id";
+                        $paypalSelector.attr('id', uniqueId);
+                        paypalDivId = uniqueId;
+                    }
+
+                    braintree.setup(clientToken, "paypal", {container: paypalDivId});
+                }
+                //braintree.setup(clientToken, "custom", {id: formId});
             }
 
             this.submitDancer.loadedCallback();
         };
 
         p.startAuthCapture = function(data) {
-            if (this.transaction.state.cardDetails) {
-                var tokenInfo = {};
-
-                for (var i in TheClass.mappings) {
-                    var mapping = TheClass.mappings[i];
-                    var valueFromForm;
-                    valueFromForm = this.transaction.state.cardDetails[i];
-                    
-                    if (valueFromForm) {
-                        tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                    }
+            var nonceValue;
+            if (this.myGateway.usePaypal) {
+                // check for a nonce
+                var $paypalSelector = $(this.myGateway.paypalButtonSelector);
+                var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
+                nonceValue = nonceSelector.val();
+                if (nonceValue) {
+                    this.gatewayResponseHandler(null, nonceValue);
+                    return;
                 }
-
-                var self = this;
-
-                var client = new braintree.api.Client({clientToken: this.clientToken});
-                client.tokenizeCard(tokenInfo, function() {
-                    self.gatewayResponseHandler.apply(self, arguments);
-                });
-            } else {
-                // submit was already bound at preauth
             }
+            var tokenInfo = {};
+
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm;
+                if (this.transaction.state.cardDetails) {
+                    valueFromForm = this.transaction.state.cardDetails[i];
+                } else {
+                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                }
+                
+                if (valueFromForm) {
+                    tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                }
+            }
+
+            var self = this;
+
+            var client = new braintree.api.Client({clientToken: this.clientToken});
+            client.tokenizeCard(tokenInfo, function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            });
         };
 
         p.gatewayResponseHandler = function(err, nonce) {
-            if (response.error) {
+            if (err) {
                 // Show the errors on the form
-                this.ultimateFailure(response.error.message);
+                this.ultimateFailure(err);
             } else {
-                // token contains id, last4, and card type
-                var token = response.id;
-                var card = response.card;
-
                 var payload = {
-                    stripeToken: token,
-                    cardID: card.id,
+                    nonce: nonce,
                     accountID: this.accountID
                 };
 
@@ -868,25 +889,27 @@
     };
 
     var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
+        var resolvedGateway = bfjs.resolveGatewayName(targetGateway);
+
         if (bfjs.core.hasBfCredentials) {
             if (!bfjs.core.gatewayChosen) {
-                bfjs.loadGateways([targetGateway]);
+                bfjs.loadGateways([resolvedGateway]);
             }
 
             if (bfjs.core.gatewayChosen){
                 var newTransaction;
                 if (cardDetails) {
-                    newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, null, accountID, callback, cardDetails);
+                    newTransaction = bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails);
                 } else {
-                    newTransaction = bfjs.Transaction.construct(bfjs, targetGateway, formElementSelector, accountID, callback, null);
+                    newTransaction = bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
                 }
                 
                 bfjs.core.doWhenReady(newTransaction);
             } else {
-                throw "You need to first call bfjs.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
+                throw "You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
             }
         } else {
-            throw "You need to first call bfjs.useAPI() will BillForward credentials";
+            throw "You need to first call BillForward.useAPI() will BillForward credentials";
         }
     };
 
@@ -905,13 +928,33 @@
         bfjs.core.hasBfCredentials = true;
     };
 
+    bfjs.addPayPalButton = function(selector) {
+        // supported for Braintree only
+        bfjs.gatewayInstances['braintree'].usePaypal = true;
+        bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
+    };
+
+    bfjs.resolveGatewayName = function(name) {
+        var lowerCase = name.toLowerCase();
+        var resolved = lowerCase;
+        if (resolved === 'braintree+paypal') {
+            resolved = 'braintree';
+            if (!bfjs.gatewayInstances[resolved].usePaypal) {
+                throw "You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button"
+            }
+        }
+
+        return resolved;
+    };
+
     bfjs.loadGateways = function(gateways) {
         for(var g in gateways) {
             var gateway = gateways[g];
+            var resolvedName = bfjs.resolveGatewayName(gateway);
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'braintree':
-                    bfjs.gatewayInstances[gateway.toLowerCase()].loadMe = true;
+                    bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
                 default:
