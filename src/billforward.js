@@ -629,6 +629,8 @@
                 var card = response.card;
 
                 var payload = {
+                    '@type': 'StripeAuthCaptureRequest',
+                    gateway: "Stripe",
                     stripeToken: token,
                     cardID: card.id,
                     accountID: this.accountID
@@ -844,6 +846,8 @@
                 this.ultimateFailure(bfjsError);
             } else {
                 var payload = {
+                    '@type': 'BraintreeAuthCaptureRequest',
+                    gateway: "Braintree",
                     nonce: nonce,
                     accountID: this.accountID
                 };
