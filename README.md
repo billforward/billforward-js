@@ -92,12 +92,15 @@ cvc
 number
 exp-month
 exp-year
+exp-date
 address-line1
 address-line2
 address-city
 address-state
 address-zip
 address-country
+first-name
+last-name
 ```
 
 ###Invoke card capture

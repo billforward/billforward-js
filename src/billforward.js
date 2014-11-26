@@ -655,8 +655,27 @@
             'number': 'number',
             'exp-date': 'expiration_date',
             'exp-month': 'expiration_month',
-            'exp-year': 'expiration_year',
-            'address-zip': 'postal_code'
+            'exp-year': 'expiration_year'
+            /*'address-zip': 'postal_code',
+            'address-line1': 'street_address',
+            'first-name': 'first_name',
+            'last-name': 'last_name'*/
+        };
+
+        TheClass.mappingsProgrammatic = {
+            'cardholder-name': 'cardholderName',
+            'cvc': 'cvv',
+            'number': 'number',
+            'exp-date': 'expirationDate',
+            'exp-month': 'expirationMonth',
+            'exp-year': 'expirationYear'
+        };
+
+        TheClass.mappingsProgrammaticBillingAddress = {
+            'address-zip': 'postalCode',
+            'address-line1': 'streetAddress',
+            'first-name': 'firstName',
+            'last-name': 'lastName'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -769,23 +788,44 @@
             }
             var tokenInfo = {};
 
-            for (var i in TheClass.mappings) {
-                var mapping = TheClass.mappings[i];
+            if (this.transaction.state.cardDetails) {
+                for (var i in TheClass.mappingsProgrammatic) {
+                    var mapping = TheClass.mappingsProgrammatic[i];
+                    var valueFromForm = this.transaction.state.cardDetails[i];
+                    
+                    if (valueFromForm) {
+                        tokenInfo[TheClass.mappingsProgrammatic[i]] = valueFromForm;
+                    }
+                }
+            } else {
+                for (var i in TheClass.mappings) {
+                    var mapping = TheClass.mappings[i];
+                    var valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    
+                    if (valueFromForm) {
+                        tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
+                }
+            }
+
+            tokenInfo.billingAddress = {};
+
+            for (var i in TheClass.mappingsProgrammaticBillingAddress) {
+                var mapping = TheClass.mappingsProgrammaticBillingAddress[i];
+
                 var valueFromForm;
                 if (this.transaction.state.cardDetails) {
                     valueFromForm = this.transaction.state.cardDetails[i];
                 } else {
                     valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                 }
-                
+
                 if (valueFromForm) {
-                    tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    tokenInfo.billingAddress[TheClass.mappingsProgrammaticBillingAddress[i]] = valueFromForm;
                 }
             }
 
             var self = this;
-
-            console.log(tokenInfo);
 
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
@@ -794,7 +834,6 @@
         };
 
         p.gatewayResponseHandler = function(err, nonce) {
-            console.log(err, nonce);
             if (err) {
                 var bfjsError = {
                     code: 3000,
@@ -849,7 +888,6 @@
         var queue = [];
         for (var i in bfjs.lateActors) {
             var actor = bfjs.lateActors[i];
-            //console.log(actor);
 
             if (typeof window[actor.depName] !== 'undefined') {
                 actor.loadedCallback.call(actor);
