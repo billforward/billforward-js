@@ -634,7 +634,7 @@
                     gateway: "Stripe",
                     stripeToken: token,
                     cardID: card.id,
-                    accountID: this.accountID
+                    accountID: this.transaction.accountID
                 };
 
                 // and re-submit
@@ -701,12 +701,15 @@
         p.do = function() {
             var payload = {
                 "@type": "BraintreePreAuthRequest",
-                "gateway": "Braintree"
+                "gateway": "Braintree",
+                "accountID": this.transaction.accountID
             }
 
             if(bfjs.state.api.organizationID != null) {
                 payload.organizationID = bfjs.state.api.organizationID;
             }
+
+            console.log(payload);
 
             this.preAuthRequestPayload = payload;
 
@@ -851,7 +854,7 @@
                     '@type': 'BraintreeAuthCaptureRequest',
                     gateway: "Braintree",
                     nonce: nonce,
-                    accountID: this.accountID
+                    accountID: this.transaction.accountID
                 };
 
                 // and re-submit
