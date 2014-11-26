@@ -397,7 +397,7 @@
                     error.message = "Auth-capture failed.";
                     if (jqXHR.responseJSON) {
                         if (jqXHR.responseJSON.errorMessage) {
-                            if (jqXHR.responseJSON.errorMessage === 'Your card was declined.') {
+                            if (jqXHR.responseJSON.errorMessage.indexOf('declined') != -1) {
                                 error.code = 4010;
                                 error.message = "Your card was declined.";
                             }
