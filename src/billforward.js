@@ -630,11 +630,11 @@
                 var card = response.card;
 
                 var payload = {
-                    '@type': 'StripeAuthCaptureRequest',
-                    gateway: "Stripe",
-                    stripeToken: token,
-                    cardID: card.id,
-                    accountID: this.transaction.accountID
+                    "@type": 'StripeAuthCaptureRequest',
+                    "gateway": "Stripe",
+                    "stripeToken": token,
+                    "cardID": card.id,
+                    "accountID": this.transaction.accountID
                 };
 
                 // and re-submit
@@ -709,8 +709,6 @@
                 payload.organizationID = bfjs.state.api.organizationID;
             }
 
-            console.log(payload);
-
             this.preAuthRequestPayload = payload;
 
             //this.doPreAuth(payload);
@@ -782,6 +780,8 @@
         };
 
         p.startAuthCapture = function(data) {
+            var self = this;
+
             var nonceValue;
             if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
                 // check for a nonce
@@ -789,7 +789,8 @@
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
                 nonceValue = nonceSelector.val();
                 if (nonceValue) {
-                    this.gatewayResponseHandler(null, nonceValue);
+                    //this.gatewayResponseHandler(null, nonceValue);
+                    self.gatewayResponseHandler.apply(self, [null, nonceValue]);
                     return;
                 }
             }
@@ -832,8 +833,6 @@
                 }
             }
 
-            var self = this;
-
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
                 self.gatewayResponseHandler.apply(self, arguments);
@@ -851,10 +850,10 @@
                 this.ultimateFailure(bfjsError);
             } else {
                 var payload = {
-                    '@type': 'BraintreeAuthCaptureRequest',
-                    gateway: "Braintree",
-                    paymentMethodNonce: nonce,
-                    accountID: this.transaction.accountID
+                    "@type": "BraintreeAuthCaptureRequest",
+                    "gateway": "Braintree",
+                    "paymentMethodNonce": nonce,
+                    "accountID": this.transaction.accountID
                 };
 
                 // and re-submit

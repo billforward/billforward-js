@@ -4,16 +4,11 @@
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 
 		<!-- Include BillForwardJS -->
-		<script type="text/javascript" src="src/billforward.js"></script>
+		<script type="text/javascript" src="../src/billforward.js"></script>
 
 		<script type="text/javascript">
-			var targetGateway = 'stripe';
-
-			// this optional speedup fetches in advance all the libraries we expect to use
-			BillForward.loadGateways([targetGateway]);
-
 			var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
-			var bfAPIURL = 'http://local.billforward.net:8080/RestAPI/';
+			var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
 
 			// connect to BillForward using credentials
 			BillForward.useAPI(bfAPIURL, bfAPIKey);
@@ -23,8 +18,10 @@
 
 			// Jquery-style selector pointing to your form
 			var formSelector = '#payment-form';
+
+			BillForward.addPayPalButton('#paypalButton');
 			// bind to 'submit' event the 'card capture' routine
-			BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID, callback);
+			BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, callback);
 
 			function callback(data, error) {
 				if (error) {
@@ -60,6 +57,10 @@
 	<body>
 		<form id="payment-form">
 			<span class="payment-errors"></span>
+
+			<div class="form-row">
+				<div id="paypalButton"></div>
+			</div>
 
 			<div class="form-row">
 				<label>
