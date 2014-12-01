@@ -719,6 +719,7 @@
             'province': 'region',
             'first-name': 'firstName',
             'last-name': 'lastName',
+            'company': 'company',
             'email': 'always@testing.is.moe'
         };
 
