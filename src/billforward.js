@@ -367,7 +367,7 @@
 
             Preauthorization:
                 20xx - Preauthorization failed
-                2000 --- (Generic)
+              * 2000 --- (Generic)
                 201x --- Expected information absent
               * 2010 ----- (Generic)
                 202x --- Precondition failed
@@ -375,13 +375,15 @@
 
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
-                3000 --- (Generic)
+              * 3000 --- (Generic)
 
             Authorized card capture:
-                40xx - Card capture failed
-                4000 --- (Generic)
-                401x --- Card declined
-                4010 ----- (Generic)
+                4xxx - Card capture failed
+              * 4000 --- (Generic)
+                41xx --- Card declined
+              * 4100 ----- (Generic)
+                42xx --- Input validation failure
+                4200 ----- (Generic)
             */
 
             var error = {
@@ -398,7 +400,7 @@
                     if (jqXHR.responseJSON) {
                         if (jqXHR.responseJSON.errorMessage) {
                             if (jqXHR.responseJSON.errorMessage.indexOf('declined') != -1) {
-                                error.code = 4010;
+                                error.code = 4100;
                                 error.message = "Your card was declined.";
                             }
                         }
@@ -676,9 +678,15 @@
 
         TheClass.mappingsProgrammaticBillingAddress = {
             'address-zip': 'postalCode',
-            'address-line1': 'streetAddress',
+            'address-line1': 'extendedAddress',
+            'address-line2': 'streetAddress',
+            'address-line3': 'locality',
+            'city': 'locality',
+            'country': 'countryName',
+            'province': 'region',
             'first-name': 'firstName',
-            'last-name': 'lastName'
+            'last-name': 'lastName',
+            'email': 'always@testing.is.moe'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -832,6 +840,8 @@
                     tokenInfo.billingAddress[TheClass.mappingsProgrammaticBillingAddress[i]] = valueFromForm;
                 }
             }
+
+            console.log(tokenInfo);
 
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
