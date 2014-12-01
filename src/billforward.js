@@ -360,7 +360,7 @@
                 12xx --- Access denied
                 1200 ----- (Generic)
                 121x ----- Access token invalid
-                1210 ------- (Generic)
+              * 1210 ------- (Generic)
                 122x ----- Privilege failure
                 1220 ------- (Generic)
                 1221 ------- Access token valid, but BillForward role lacks privilege
@@ -425,6 +425,10 @@
                             }
                         }
                     }
+                    break;
+                case 401:
+                    error.code = 1210;
+                    error.message = "Invalid access token.";
                     break;
                 case  500:
                     if (phase === "pre") {
