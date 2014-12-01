@@ -368,6 +368,7 @@
             Preauthorization:
                 20xx - Preauthorization failed
               * 2000 --- (Generic)
+              * 2001 --- Unhandled BillForward server error
                 201x --- Expected information absent
               * 2010 ----- (Generic)
                 202x --- Precondition failed
@@ -380,35 +381,63 @@
             Authorized card capture:
                 4xxx - Card capture failed
               * 4000 --- (Generic)
+              * 4001 --- Unhandled BillForward server error
                 41xx --- Card declined
               * 4100 ----- (Generic)
                 42xx --- Input validation failure
-                4200 ----- (Generic)
+              * 4200 ----- (Generic)
             */
 
             var error = {
                 detailObj: jqXHR
             };
 
-            if (jqXHR.status === 400) {
-                if (phase === "pre") {
-                    error.code = 2000;
-                    error.message = "Preauthorization failed.";
-                } else {
-                    error.code = 4000;
-                    error.message = "Auth-capture failed.";
-                    if (jqXHR.responseJSON) {
-                        if (jqXHR.responseJSON.errorMessage) {
-                            if (jqXHR.responseJSON.errorMessage.indexOf('declined') != -1) {
-                                error.code = 4100;
-                                error.message = "Your card was declined.";
+            switch (jqXHR.status) {
+                case  400:
+                    if (phase === "pre") {
+                        error.code = 2000;
+                        error.message = "Preauthorization failed.";
+                    } else {
+                        error.code = 4000;
+                        error.message = "Auth-capture failed.";
+                        var json = jqXHR.responseJSON;
+                        if (json) {
+                            if (json.errorType) {
+                                switch (json.errorType) {
+                                    case 'BraintreeOperationFailure':
+                                        error.code = 4200;
+                                        var portions = json.errorMessage.split(" Message was: ");
+                                        error.message = portions[0];
+                                        error.detailObj = {
+                                            'message': portions[1]
+                                        };
+
+                                        break;
+                                    case 'ServerError':
+                                    default:
+                                        if (json.errorMessage) {
+                                            if (json.errorMessage.indexOf('declined') != -1) {
+                                                error.code = 4100;
+                                                error.message = "Your card was declined.";
+                                            }
+                                        }
+                                }
                             }
                         }
                     }
-                }
-            } else {
-                error.code = 1100;
-                error.message = "Failed to connect to BillForward.";
+                    break;
+                case  500:
+                    if (phase === "pre") {
+                        error.code = 2001;
+                        error.message = "BillForward server encountered unhandled error.";
+                    } else {
+                        error.code = 4001;
+                        error.message = "BillForward server encountered unhandled error.";
+                    }
+                    break;
+                default:
+                    error.code = 1100;
+                    error.message = "Failed to connect to BillForward.";
             }
 
             return error;
