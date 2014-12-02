@@ -353,7 +353,7 @@
 
             Connecting to BillForward:
                 1xxx - Failure to connect
-                1000 ----- (Generic)
+              * 1000 ----- (Generic)
                 11xx --- Failure to reach server
               * 1100 ----- (Generic)
                 12xx --- Access denied
@@ -362,8 +362,8 @@
               * 1210 ------- (Generic)
               * 1211 ------- Access token expired
                 122x ----- Privilege failure
-                1220 ------- (Generic)
-                1221 ------- Access token valid, but BillForward role lacks privilege
+              * 1220 ------- (Generic)
+              * 1221 ------- Access token valid, but BillForward role lacks privilege
 
             Preauthorization:
                 20xx - Preauthorization failed
@@ -372,7 +372,8 @@
                 201x --- Expected information absent
               * 2010 ----- (Generic)
                 202x --- Precondition failed
-                2020 ----- (Generic)
+              * 2020 ----- (Generic)
+              * 2021 ----- Specified gateway not configured
 
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
@@ -420,6 +421,13 @@
                         error.code = 2000;
                         error.message = "Preauthorization failed.";
                         switch (json.errorType) {
+                            case 'PreconditionFailed':
+                                error.code = 2020;
+                                error.message = "A required precondition was not satisfied before this request.";
+                                if (json.errorMessage.indexOf('not been configured') !== -1) {
+                                    error.code = 2021;
+                                    error.message = "You must first configure your gateway in the BillForward UI.";
+                                }
                             case 'ServerError':
                             default:
                                 if (jqXHR.status === 500) {
@@ -452,6 +460,17 @@
                                 }
                         }
                     }
+                    switch (json.errorType) {
+                        case 'PermissionsError':
+                            error.code = 1220;
+                            error.message = "Access to BillForward server is denied.";
+                            if (json.errorMessage === 'Access is denied') {
+                                error.code = 1221;
+                                error.message = "Your BillForward role lacks privilege to capture cards.";
+                            }
+                            break;
+                        default:
+                        }
                     break;
                 case 401:
                     error.code = 1210;
@@ -462,8 +481,13 @@
                     }
                     break;
                 default:
-                    error.code = 1100;
+                    error.code = 1000;
                     error.message = "Failed to connect to BillForward.";
+
+                    if (jqXHR.readyState === 0) {
+                        error.code = 1100;
+                        error.message = "Failed to connect to BillForward.";
+                    }
             }
 
             return error;
@@ -584,10 +608,11 @@
             'number': 'number',
             'exp-month': 'exp_month',
             'exp-year': 'exp_year',
+            'exp-date': 'exp_date', // not supported in Stripe; we cheat
             'address-line1': 'address_line1',
             'address-line2': 'address_line2',
             'address-city': 'address_city',
-            'address-state': 'address_state',
+            'address-province': 'address_state',
             'address-zip': 'address_zip',
             'address-country': 'address_country',
         };
@@ -661,7 +686,17 @@
                 }
                 
                 if (valueFromForm) {
-                    tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    switch (mapping) {
+                        case 'exp_date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            tokenInfo['expMonth'] = month;
+                            tokenInfo['expYear'] = year;
+                            break;
+                        default:
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
                 }
             }
 
@@ -732,13 +767,12 @@
             'address-line1': 'extendedAddress',
             'address-line2': 'streetAddress',
             'address-line3': 'locality',
-            'city': 'locality',
-            'country': 'countryName',
-            'province': 'region',
+            'address-city': 'locality',
+            'address-country': 'countryName',
+            'address-province': 'region',
             'first-name': 'firstName',
             'last-name': 'lastName',
             //'company': 'company',
-            'email': 'email'
         };
 
         var p = TheClass.prototype = new _parent();

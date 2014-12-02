@@ -88,18 +88,20 @@ Here is the current list of `bf-data` attributes:
 cardholder-name
 cvc
 number
-exp-month
-exp-year
-exp-date
+exp-month			// in the format '01'
+exp-year			// in the format '2016'
+exp-date			// in the format '01/2016'
 address-line1
 address-line2
 address-city
-address-state
+address-province	// use this for 'state' in America
 address-zip
-address-country
+address-country		// in the format 'United Kingdom'
 first-name
 last-name
 ```
+
+All are assumed to be the String datatype.
 
 ###Invoke card capture
 You can now invoke BillForward.js.
@@ -230,7 +232,7 @@ Special:
 
 Connecting to BillForward:
     1xxx - Failure to connect
-    1000 ----- (Generic)
+  * 1000 ----- (Generic)
     11xx --- Failure to reach server
   * 1100 ----- (Generic)
     12xx --- Access denied
@@ -239,8 +241,8 @@ Connecting to BillForward:
   * 1210 ------- (Generic)
   * 1211 ------- Access token expired
     122x ----- Privilege failure
-    1220 ------- (Generic)
-    1221 ------- Access token valid, but BillForward role lacks privilege
+  * 1220 ------- (Generic)
+  * 1221 ------- Access token valid, but BillForward role lacks privilege
 
 Preauthorization:
     20xx - Preauthorization failed
@@ -249,7 +251,8 @@ Preauthorization:
     201x --- Expected information absent
   * 2010 ----- (Generic)
     202x --- Precondition failed
-    2020 ----- (Generic)
+  * 2020 ----- (Generic)
+  * 2021 ----- Specified gateway not configured
 
 Client-side tokenization of card with gateway:
     30xx - Tokenization failed
@@ -294,17 +297,6 @@ function callback(data, error) {
 	}
 };
 ```
-
-###Optimize
-For faster card capture, you can fetch dependencies (such as Stripe.js) early, rather than waiting until 'Submit' has been clicked. Declare using `BillForward.loadGateways()` which gateways you will be using on this checkout page.
-
-For example:
-
-```js
-BillForward.loadGateways(['stripe', 'braintree']);
-```
-
-This will load in the libraries for Stripe and Braintree (irrespective of which one is actually recruited upon Submit).
 
 ###Capture without form
 We provide an alternative invocation, allowing you to capture a card programmatically rather than using a form:
