@@ -401,58 +401,64 @@
                 }
             }
 
+            if (!json) {
+                json = {};
+            }
+
+            if (!json.errorType) {
+                json.errorType = "";
+            }
+
+            if (!json.errorMessage) {
+                json.errorMessage = "";
+            }
+
             switch (jqXHR.status) {
                 case  400:
+                case  500:
                     if (phase === "pre") {
                         error.code = 2000;
                         error.message = "Preauthorization failed.";
+                        switch (json.errorType) {
+                            case 'ServerError':
+                            default:
+                                if (jqXHR.status === 500) {
+                                    error.code = 2001;
+                                    error.message = "BillForward server encountered unhandled error during pre-authorization.";
+                                }
+                        }
                     } else {
                         error.code = 4000;
                         error.message = "Auth-capture failed.";
-                        if (json) {
-                            if (json.errorType) {
-                                switch (json.errorType) {
-                                    case 'BraintreeOperationFailure':
-                                        error.code = 4200;
-                                        var portions = json.errorMessage.split(" Message was: ");
-                                        error.message = portions[0];
-                                        error.detailObj = {
-                                            'message': portions[1]
-                                        };
+                        switch (json.errorType) {
+                            case 'BraintreeOperationFailure':
+                                error.code = 4200;
+                                var portions = json.errorMessage.split(" Message was: ");
+                                error.message = portions[0];
+                                error.detailObj = {
+                                    'message': portions[1]
+                                };
 
-                                        break;
-                                    case 'ServerError':
-                                    default:
-                                        if (json.errorMessage) {
-                                            if (json.errorMessage.indexOf('declined') != -1) {
-                                                error.code = 4100;
-                                                error.message = "Your card was declined.";
-                                            }
-                                        }
+                                break;
+                            case 'ServerError':
+                            default:
+                                if (jqXHR.status === 500) {
+                                    error.code = 4001;
+                                    error.message = "BillForward server encountered unhandled error during authorized card capture.";
                                 }
-                            }
+                                if (json.errorMessage.indexOf('declined') != -1) {
+                                    error.code = 4100;
+                                    error.message = "Your card was declined.";
+                                }
                         }
                     }
                     break;
                 case 401:
                     error.code = 1210;
                     error.message = "Your BillForward token is invalid.";
-                    if (json) {
-                        if (json.errorMessage) {
-                            if (json.errorMessage.indexOf('expired') != -1) {
-                                error.code = 1211;
-                                error.message = "Your BillForward token has expired.";
-                            }
-                        }
-                    }
-                    break;
-                case  500:
-                    if (phase === "pre") {
-                        error.code = 2001;
-                        error.message = "BillForward server encountered unhandled error.";
-                    } else {
-                        error.code = 4001;
-                        error.message = "BillForward server encountered unhandled error.";
+                    if (json.errorMessage.indexOf('expired') != -1) {
+                        error.code = 1211;
+                        error.message = "Your BillForward token has expired.";
                     }
                     break;
                 default:
@@ -710,10 +716,6 @@
             'exp-date': 'expiration_date',
             'exp-month': 'expiration_month',
             'exp-year': 'expiration_year'
-            /*'address-zip': 'postal_code',
-            'address-line1': 'street_address',
-            'first-name': 'first_name',
-            'last-name': 'last_name'*/
         };
 
         TheClass.mappingsProgrammatic = {
@@ -735,8 +737,8 @@
             'province': 'region',
             'first-name': 'firstName',
             'last-name': 'lastName',
-            'company': 'company',
-            'email': 'always@testing.is.moe'
+            //'company': 'company',
+            'email': 'email'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -891,7 +893,7 @@
                 }
             }
 
-            console.log(tokenInfo);
+            //console.log(tokenInfo);
 
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
