@@ -197,7 +197,6 @@
                 cardDetails: cardDetails
             };
         };
-
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
@@ -361,6 +360,7 @@
                 1200 ----- (Generic)
                 121x ----- Access token invalid
               * 1210 ------- (Generic)
+              * 1211 ------- Access token expired
                 122x ----- Privilege failure
                 1220 ------- (Generic)
                 1221 ------- Access token valid, but BillForward role lacks privilege
@@ -391,6 +391,15 @@
             var error = {
                 detailObj: jqXHR
             };
+            var json = jqXHR.responseJSON;
+            var text = jqXHR.responseText;
+            if (text) {
+                try {
+                    var parsed = JSON.parse(text);
+                    json = parsed;
+                } catch(e) {
+                }
+            }
 
             switch (jqXHR.status) {
                 case  400:
@@ -400,7 +409,6 @@
                     } else {
                         error.code = 4000;
                         error.message = "Auth-capture failed.";
-                        var json = jqXHR.responseJSON;
                         if (json) {
                             if (json.errorType) {
                                 switch (json.errorType) {
@@ -428,7 +436,15 @@
                     break;
                 case 401:
                     error.code = 1210;
-                    error.message = "Invalid access token.";
+                    error.message = "Your BillForward token is invalid.";
+                    if (json) {
+                        if (json.errorMessage) {
+                            if (json.errorMessage.indexOf('expired') != -1) {
+                                error.code = 1211;
+                                error.message = "Your BillForward token has expired.";
+                            }
+                        }
+                    }
                     break;
                 case  500:
                     if (phase === "pre") {

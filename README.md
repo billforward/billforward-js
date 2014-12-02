@@ -236,18 +236,33 @@ Connecting to BillForward:
     12xx --- Access denied
     1200 ----- (Generic)
     121x ----- Access token invalid
-    1210 ------- (Generic)
+  * 1210 ------- (Generic)
+  * 1211 ------- Access token expired
     122x ----- Privilege failure
     1220 ------- (Generic)
     1221 ------- Access token valid, but BillForward role lacks privilege
 
 Preauthorization:
     20xx - Preauthorization failed
-    2000 --- (Generic)
+  * 2000 --- (Generic)
+  * 2001 --- Unhandled BillForward server error
     201x --- Expected information absent
   * 2010 ----- (Generic)
     202x --- Precondition failed
     2020 ----- (Generic)
+
+Client-side tokenization of card with gateway:
+    30xx - Tokenization failed
+  * 3000 --- (Generic)
+
+Authorized card capture:
+    4xxx - Card capture failed
+  * 4000 --- (Generic)
+  * 4001 --- Unhandled BillForward server error
+    41xx --- Card declined
+  * 4100 ----- (Generic)
+    42xx --- Input validation failure
+  * 4200 ----- (Generic)
 ```
 
 
