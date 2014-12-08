@@ -38,7 +38,7 @@
 				if (error) {
 					console.error(error);
 
-					$(formSelector).find('.payment-errors').html(error.message).wrap('<pre />');
+					$(formSelector).find('.payment-errors').text(error.message);
         			$(formSelector).find('button').prop('disabled', false);
 				} else {
 					console.log(paymentMethod);
