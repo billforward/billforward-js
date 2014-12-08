@@ -49,7 +49,7 @@
             this.loadMe = true;
 
             // statics
-            this.depUrl = "//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js";
+            this.depUrl = "https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js";
             this.depName = "jQuery";
         };
 
@@ -300,7 +300,7 @@
                 contentType: 'application/json',
                 crossDomain: true,
                 headers: {
-                    'Authorization': 'Bearer '+auth,
+                    'Authorization': 'Bearer '+auth
                 },
             }
             return ajaxObj;
@@ -513,25 +513,26 @@
             this.oncePreAuthed();
         };
 
-        p.authCaptureSuccessHandler = function(paymentMethod) {
-            this.onceAuthCaptured(paymentMethod);
+        p.authCaptureSuccessHandler = function(data) {
+            this.onceAuthCaptured(data);
         };
 
         p.oncePreAuthed = function() {
             this.submitDancer.loadedCallback();
         };
 
-        p.onceAuthCaptured = function(paymentMethod) {
+        p.onceAuthCaptured = function(data) {
+            var paymentMethod = data.results[0];
             this.ultimateSuccess(paymentMethod);
         };
 
         p.ultimateSuccess = function(paymentMethod) {
-            console.log(paymentMethod);
+            //console.log(paymentMethod);
             this.transaction.callback(paymentMethod, false);
         };
 
         p.ultimateFailure = function(reason) {
-            console.error(reason);
+            //console.error(reason);
             this.transaction.callback(null, reason);
         };
 
@@ -764,14 +765,14 @@
 
         TheClass.mappingsProgrammaticBillingAddress = {
             'address-zip': 'postalCode',
-            'address-line1': 'extendedAddress',
-            'address-line2': 'streetAddress',
+            'address-line1': 'streetAddress',
+            'address-line2': 'extendedAddress',
             'address-line3': 'locality',
             'address-city': 'locality',
             'address-country': 'countryName',
             'address-province': 'region',
             'first-name': 'firstName',
-            'last-name': 'lastName',
+            'last-name': 'lastName'
             //'company': 'company',
         };
 

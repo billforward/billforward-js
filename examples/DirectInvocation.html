@@ -19,7 +19,20 @@
 			// Jquery-style selector pointing to your form
 			var formSelector = '#payment-form';
 
-			BillForward.captureCardOnSubmit(formSelector, 'stripe', accountID, callback);
+			var cardDetails = {
+				'cardholder-name': 'Bob Johnson',
+                'cvc': '123',
+                'number': '4111111111111111', 
+                'exp-month': '01',
+                'exp-year': '2016',
+                'address-zip': '90210',
+                'address-line1': '1 Privet Drive',
+                'address-line2': 'Cupboard under stairs',
+                'address-city': 'Little Whinging',
+                'address-province': 'Surrey',
+                'address-country': 'United Kingdom'
+			};
+			BillForward.captureCard(cardDetails, 'braintree', accountID, callback);
 
 			function callback(paymentMethod, error) {
 				if (error) {

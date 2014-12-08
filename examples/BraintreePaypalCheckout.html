@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<!-- Include JQuery (optional; useful for handling the form in callback) -->
-		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 
 		<!-- Include BillForwardJS -->
 		<script type="text/javascript" src="../src/billforward.js"></script>
@@ -23,13 +23,19 @@
 			// bind to 'submit' event the 'card capture' routine
 			BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, callback);
 
-			function callback(data, error) {
+			function callback(paymentMethod, error) {
 				if (error) {
-					$(formSelector).find('.payment-errors').text(error.message);
+					console.error(error);
+
+					$(formSelector).find('.payment-errors').html(error.message).wrap('<pre />');
         			$(formSelector).find('button').prop('disabled', false);
 				} else {
-					var paymentMethod = data;
+					console.log(paymentMethod);
 
+					$(formSelector).find('.payment-success').html("Created payment method with ID: '"+paymentMethod.id+"'\nFor account with ID: \t\t'"+paymentMethod.accountID+"'").wrap('<pre />');
+
+					// uncomment the following if you want to post the result to your backend immediately
+					/*
 			        var addPostVariable = function(varName, value) {
 			        	// add as 'hidden' form variables those values we wish to submit
 			            $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
@@ -49,6 +55,7 @@
 
 			        // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
 			        $(formSelector).get(0).submit();
+			        */
 				}
 			};
         </script>
@@ -57,6 +64,7 @@
 	<body>
 		<form id="payment-form">
 			<span class="payment-errors"></span>
+			<span class="payment-success"></span>
 
 			<div class="form-row">
 				<div id="paypalButton"></div>
