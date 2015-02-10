@@ -1125,8 +1125,8 @@
     };
 
     bfjs.loadGateways = function(gateways) {
-        for(var g in gateways) {
-            var gateway = gateways[g];
+       for (i = 0; i < gateways.length; i++) {
+            var gateway = gateways[i];
             var resolvedName = bfjs.resolveGatewayName(gateway);
             switch(gateway.toLowerCase()) {
                 case 'stripe':
