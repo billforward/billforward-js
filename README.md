@@ -170,14 +170,8 @@ The returned object in the event of success is a JSON representation of a BillFo
 
 ```js
 {
-	"@type" : "paymentMethod",
-	"created" : "2014-11-25T10:21:53Z",
-	"changedBy" : "D082FABA-335D-4C55-8ECF-921BA46C0788",
-	"updated" : "2014-11-25T10:21:53Z",
-	"id" : "8A832825-5D19-49C0-83F8-561BBF5BBDBC",
-	"crmID" : "card_152gSCFtrCKhtAEG4sOSK2xL",
-	"accountID" : "EE82106F-1E41-48BD-8CCD-48AD3F624511",
-	"organizationID" : "686A11E8-CCD1-11E3-B479-289EA14A90F5",
+	"id" : "PMD-2825-5D19-49C0-83F8-561BBF5BBDBC",
+	"accountID" : "ACC-106F-1E41-48BD-8CCD-48AD3F624511",
 	"name" : "Visa (4242)",
 	"description" : "############4242",
 	"expiryDate" : "2016/01",
@@ -185,7 +179,6 @@ The returned object in the event of success is a JSON representation of a BillFo
 	"linkID" : "19F10489-24EC-4FB2-8284-A74E0C1726EB",
 	"gateway" : "stripe",
 	"priority" : 0,
-	"userEditable" : false,
 	"reusable" : true,
 	"deleted" : false
 }
