@@ -127,6 +127,32 @@
         return TheClass;
     })();
 
+    bfjs.SpreedlyGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'spreedly';
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.BraintreeGateway = (function() {
         var TheClass = function() {
             // statics
@@ -950,6 +976,148 @@
                     "@type": "BraintreeAuthCaptureRequest",
                     "gateway": "Braintree",
                     "paymentMethodNonce": nonce,
+                    "accountID": this.transaction.accountID
+                };
+
+                // and re-submit
+                this.doAuthCapture(payload);
+            }
+        };
+
+        return TheClass;
+    })();
+
+    bfjs.SpreedlyTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+            'cardholder-name': 'name',
+            'cvc': 'cvc',
+            'number': 'number',
+            'exp-month': 'exp_month',
+            'exp-year': 'exp_year',
+            'exp-date': 'exp_date', // not supported in Stripe; we cheat
+            'address-line1': 'address_line1',
+            'address-line2': 'address_line2',
+            'address-city': 'address_city',
+            'address-province': 'address_state',
+            'address-zip': 'address_zip',
+            'address-country': 'address_country',
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p.do = function() {
+            var payload = {
+                "@type": "StripePreAuthRequest",
+                "gateway": "Stripe"
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var stripePublishableKey;
+            var failed = false;
+            try {
+                stripePublishableKey = data.results[0].publicKey;
+                if (!data.results[0].publicKey) {
+                    failed = true;
+                }   
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+            // This identifies your website in the createToken call below
+
+            var stripePublishableKey = data.results[0].publicKey;
+            Stripe.setPublishableKey(stripePublishableKey);
+            
+            var tokenInfo = {};
+            
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm;
+                if (this.transaction.state.cardDetails) {
+                    valueFromForm = this.transaction.state.cardDetails[i];
+                } else {
+                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                }
+                
+                if (valueFromForm) {
+                    switch (mapping) {
+                        case 'exp_date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            tokenInfo['expMonth'] = month;
+                            tokenInfo['expYear'] = year;
+                            break;
+                        default:
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
+                }
+            }
+
+            var self = this;
+
+            Stripe.card.createToken(tokenInfo, function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            });
+        };
+
+        p.gatewayResponseHandler = function(status, response) {
+            if (response.error) {
+                var bfjsError = {
+                    code: 3000,
+                    message: "Card capture to Stripe failed.",
+                    detailObj: response
+                };
+                // Show the errors on the form
+                this.ultimateFailure(bfjsError);
+            } else {
+                // token contains id, last4, and card type
+                var token = response.id;
+                var card = response.card;
+
+                var payload = {
+                    "@type": 'StripeAuthCaptureRequest',
+                    "gateway": "Stripe",
+                    "stripeToken": token,
+                    "cardID": card.id,
                     "accountID": this.transaction.accountID
                 };
 
