@@ -1089,7 +1089,7 @@
                             tokenInfo['expYear'] = year;
                             break;
                         case 'name':
-                            var parts = valueFromForm.split(" ");
+                            var parts = (valueFromForm||"").split(" ");
                             var firstName;
                             var lastName;
                             if (parts.length<2) {
@@ -1143,12 +1143,17 @@
         p.gatewayResponseHandler = function(data) {
             console.log(data);
             if (data.status === 201) {
-                var token = data.transaction.payment_method.token;
-                if (!token) {
+                var parseFailure = false;
+                try {
+                    var token = data.transaction.payment_method.token;
+                } catch(e) {
+                    parseFailure = true;
+                }
+                if (parseFailure || !token) {
                     var bfjsError = {
-                    code: 3200,
-                    message: "Card capture to Spreedly failed; token not in promised location within response.",
-                    detailObj: data
+                        code: 3200,
+                        message: "Card capture to Spreedly failed; token not in promised location within response.",
+                        detailObj: data
                     };
                     return this.ultimateFailure(bfjsError);
                 }
@@ -1165,7 +1170,7 @@
                 var bfjsError = {
                     code: 3000,
                     message: "Card capture to Spreedly failed.",
-                    detailObj: response
+                    detailObj: data
                 };
                 // Show the errors on the form
                 return this.ultimateFailure(bfjsError);
