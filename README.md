@@ -250,6 +250,10 @@ Preauthorization:
 Client-side tokenization of card with gateway:
     30xx - Tokenization failed
   * 3000 --- (Generic)
+    31xx --- Failed to connect to gateway
+  * 3100 ----- (Generic)
+    32xx --- Received malformed response
+  * 3200 ----- (Generic)
 
 Authorized card capture:
     4xxx - Card capture failed

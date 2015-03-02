@@ -404,6 +404,10 @@
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
               * 3000 --- (Generic)
+                31xx --- Failed to connect to gateway
+              * 3100 ----- (Generic)
+                32xx --- Received malformed response
+              * 3200 ----- (Generic)
 
             Authorized card capture:
                 4xxx - Card capture failed
@@ -995,18 +999,20 @@
         };
 
         TheClass.mappings = {
-            'cardholder-name': 'name',
-            'cvc': 'cvc',
+            'cardholder-name': 'name', // not supported in Spreedly; we cheat
+            'cvc': 'verification_value',
             'number': 'number',
-            'exp-month': 'exp_month',
-            'exp-year': 'exp_year',
+            'exp-month': 'month',
+            'exp-year': 'year',
             'exp-date': 'exp_date', // not supported in Stripe; we cheat
-            'address-line1': 'address_line1',
-            'address-line2': 'address_line2',
-            'address-city': 'address_city',
-            'address-province': 'address_state',
-            'address-zip': 'address_zip',
-            'address-country': 'address_country',
+            'address-line1': 'address1',
+            'address-line2': 'address2',
+            'address-city': 'city',
+            'address-province': 'state',
+            'address-zip': 'zip',
+            'address-country': 'country',
+            'phone-mobile': 'phone_number',
+            'email': 'email',
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1028,8 +1034,8 @@
 
         p.do = function() {
             var payload = {
-                "@type": "StripePreAuthRequest",
-                "gateway": "Stripe"
+                "@type": "SpreedlyPreAuthRequest",
+                "gateway": "Spreedly"
             }
 
             if(this.transaction.bfjs.state.api.organizationID != null) {
@@ -1043,10 +1049,10 @@
         };
 
         p.startAuthCapture = function(data) {
-            var stripePublishableKey;
+            var spreedlyEnvKey;
             var failed = false;
             try {
-                stripePublishableKey = data.results[0].publicKey;
+                spreedlyEnvKey = data.results[0].publicKey;
                 if (!data.results[0].publicKey) {
                     failed = true;
                 }   
@@ -1061,10 +1067,6 @@
                     detailObj: data
                 });
             }
-            // This identifies your website in the createToken call below
-
-            var stripePublishableKey = data.results[0].publicKey;
-            Stripe.setPublishableKey(stripePublishableKey);
             
             var tokenInfo = {};
             
@@ -1086,6 +1088,22 @@
                             tokenInfo['expMonth'] = month;
                             tokenInfo['expYear'] = year;
                             break;
+                        case 'name':
+                            var parts = valueFromForm.split(" ");
+                            var firstName;
+                            var lastName;
+                            if (parts.length<2) {
+                                // I guess assume they only provided a first name?
+                                firstName = parts[0];
+                                lastName = "";
+                            } else {
+                                // we'll consider the final word to be the surname; everything else is first name.
+                                firstName = parts.slice(0, -1).join(' ');
+                                lastName = parts.slice(-1).join(' ');
+                            }
+                            tokenInfo['first_name'] = firstName;
+                            tokenInfo['last_name'] = lastName;
+                            break;
                         default:
                             tokenInfo[TheClass.mappings[i]] = valueFromForm;
                     }
@@ -1094,35 +1112,63 @@
 
             var self = this;
 
-            Stripe.card.createToken(tokenInfo, function() {
+            tokenInfo['environment_key'] = spreedlyEnvKey;
+
+            // Serialize and URI encode parameters.
+            var paramStr = $.param(tokenInfo);
+
+            var url = "https://core.spreedly.com/v1/payment_methods.js?"+ paramStr;
+            var ajaxObj = {
+              type: "GET",
+              url: url,
+              dataType: "jsonp"
+            };
+
+            $.ajax(ajaxObj)
+            .success(function() {
                 self.gatewayResponseHandler.apply(self, arguments);
+            })
+            .error(function(jqXHR, textStatus, errorThrown) {
+                var bfjsError = {
+                    detailObj: jqXHR,
+                    message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
+                    code: 3100
+                };
+
+                // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+                self.ultimateFailure(bfjsError);
             });
         };
 
-        p.gatewayResponseHandler = function(status, response) {
-            if (response.error) {
-                var bfjsError = {
-                    code: 3000,
-                    message: "Card capture to Stripe failed.",
-                    detailObj: response
-                };
-                // Show the errors on the form
-                this.ultimateFailure(bfjsError);
-            } else {
-                // token contains id, last4, and card type
-                var token = response.id;
-                var card = response.card;
+        p.gatewayResponseHandler = function(data) {
+            console.log(data);
+            if (data.status === 201) {
+                var token = data.transaction.payment_method.token;
+                if (!token) {
+                    var bfjsError = {
+                    code: 3200,
+                    message: "Card capture to Spreedly failed; token not in promised location within response.",
+                    detailObj: data
+                    };
+                    return this.ultimateFailure(bfjsError);
+                }
 
                 var payload = {
-                    "@type": 'StripeAuthCaptureRequest',
-                    "gateway": "Stripe",
-                    "stripeToken": token,
-                    "cardID": card.id,
+                    "@type": 'SpreedlyAuthCaptureRequest',
+                    "gateway": "Spreedly",
+                    "cardToken": token,
                     "accountID": this.transaction.accountID
                 };
 
-                // and re-submit
-                this.doAuthCapture(payload);
+                return this.doAuthCapture(payload);
+            } else {
+                var bfjsError = {
+                    code: 3000,
+                    message: "Card capture to Spreedly failed.",
+                    detailObj: response
+                };
+                // Show the errors on the form
+                return this.ultimateFailure(bfjsError);
             }
         };
 
@@ -1134,18 +1180,21 @@
 
     bfjs.gatewayInstances = {
         'stripe': bfjs.StripeGateway.construct(),
-        'braintree': bfjs.BraintreeGateway.construct()
+        'braintree': bfjs.BraintreeGateway.construct(),
+        'spreedly': bfjs.SpreedlyGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
-        'braintree': bfjs.BraintreeTransaction
+        'braintree': bfjs.BraintreeTransaction,
+        'spreedly': bfjs.SpreedlyTransaction
     };
 
     bfjs.lateActors = [
         bfjs.core,
         bfjs.gatewayInstances['stripe'],
-        bfjs.gatewayInstances['braintree']
+        bfjs.gatewayInstances['braintree'],
+        bfjs.gatewayInstances['spreedly']
     ];
 
     bfjs.state = {
@@ -1159,10 +1208,10 @@
     bfjs.grabScripts = function() {
 
         var queue = [];
-        for (var i in bfjs.lateActors) {
+        for (var i=0; i<bfjs.lateActors.length; i++) {
             var actor = bfjs.lateActors[i];
 
-            if (typeof window[actor.depName] !== 'undefined') {
+            if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
                 actor.loadedCallback.call(actor);
             } else {
                 queue.push({
@@ -1299,6 +1348,7 @@
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'braintree':
+                case 'spreedly':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
