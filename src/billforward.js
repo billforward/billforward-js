@@ -1141,7 +1141,6 @@
         };
 
         p.gatewayResponseHandler = function(data) {
-            console.log(data);
             if (data.status === 201) {
                 var parseFailure = false;
                 try {
