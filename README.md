@@ -24,13 +24,42 @@ Currently supported:
 `braintree`
 `braintree+paypal`
 
-###Initialize
-
+###Include
+####Easy mode
 Embed BillForward.js into your page:
 
 ```html
 <script type="text/javascript" src="lib/billforward-js/src/billforward.js"></script>
 ```
+
+####RequireJS
+You can shim us into your require-config.js:
+
+```js
+require.config({
+	paths: {
+		"BillForward": "/path/to/billforward", // billforward.js location
+	},
+	shim: {
+		"BillForward": {
+	    	deps: ["jQuery"], // you don't have to declare a dependency on JQuery (BFJS can look for window.jQuery at runtime), but it helps
+	    	exports: 'BillForward' // we set window.BillForward, so shim should look for this
+	    }
+	}
+});
+```
+
+Then your RequireJS module can access us like so:
+
+```js
+define([
+  "BillForward",
+], function (BillForward) {
+	console.log(BillForward); // it's here; honest!
+});
+```
+
+###Initialize
 
 Generate a [public token](https://app-sandbox.billforward.net/#/setup/personal/api-keys).
 

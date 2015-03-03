@@ -325,6 +325,7 @@
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
                 crossDomain: true,
+                async: true,
                 headers: {
                     'Authorization': 'Bearer '+auth
                 },
@@ -999,6 +1000,8 @@
         };
 
         TheClass.mappings = {
+            'name-first': 'first_name',
+            'name-last': 'last_name',
             'cardholder-name': 'name', // not supported in Spreedly; we cheat
             'cvc': 'verification_value',
             'number': 'number',
@@ -1121,14 +1124,15 @@
             var ajaxObj = {
               type: "GET",
               url: url,
-              dataType: "jsonp"
+              dataType: "jsonp",
+              async: true
             };
 
             $.ajax(ajaxObj)
-            .success(function() {
+            .done(function() {
                 self.gatewayResponseHandler.apply(self, arguments);
             })
-            .error(function(jqXHR, textStatus, errorThrown) {
+            .fail(function(jqXHR, textStatus, errorThrown) {
                 var bfjsError = {
                     detailObj: jqXHR,
                     message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
