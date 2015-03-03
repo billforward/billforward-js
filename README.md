@@ -23,6 +23,7 @@ Currently supported:
 `stripe`
 `braintree`
 `braintree+paypal`
+`spreedly`
 
 ###Include
 ####Easy mode
