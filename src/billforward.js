@@ -1085,7 +1085,7 @@
         // these, if present, will be thrown straight into BF authCapture request.
         TheClass.bfBypass = {
             'company-name': 'companyName',
-            'name-first': 'firstName'
+            'name-first': 'firstName',
             'name-last': 'lastName'
         };
 
