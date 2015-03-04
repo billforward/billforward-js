@@ -647,6 +647,16 @@
             'address-province': 'address_state',
             'address-zip': 'address_zip',
             'address-country': 'address_country',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
         };
 
         var p = TheClass.prototype = new _parent();
@@ -707,27 +717,64 @@
             Stripe.setPublishableKey(stripePublishableKey);
             
             var tokenInfo = {};
+
+            var resolvedValues = (function(mappings) {
+                var map = {};
+
+                for (var i in mappings) {
+                    var mapping = mappings[i];
+                    var valueFromForm;
+                    valueFromForm = this.transaction.state.cardDetails
+                    ? this.transaction.state.cardDetails[i]
+                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+
+                    map[i] = valueFromForm;
+                }
+
+                return map;
+            })
+            .call(this, TheClass.mappings);
+
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
+            };
             
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
-                var valueFromForm;
-                if (this.transaction.state.cardDetails) {
-                    valueFromForm = this.transaction.state.cardDetails[i];
-                } else {
-                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
-                }
+                var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
                 
                 if (valueFromForm) {
-                    switch (mapping) {
-                        case 'exp_date':
+                    switch (i) {
+                        case 'exp-date':
                             var parts = valueFromForm.split("/");
                             var month = parts[0];
                             var year = parts[1];
-                            tokenInfo['expMonth'] = month;
-                            tokenInfo['expYear'] = year;
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
+                            break;
+                        case 'exp-month':
+                        case 'exp-year':
+                            // concede fealty
+                            if (resolvedValues['exp-date']) break;
+                            doDefault(); break;
+                        case 'name-last': break;
+                        case 'name-first':
+                            if (!resolvedValues['cardholder-name']) {
+                                // we'll have to build it from first and last
+                                var cardHolderName = [
+                                resolvedValues['name-first'],
+                                resolvedValues['name-last']
+                                ].join(" ");
+
+                                setKeyToVal('cardholder-name', cardHolderName);
+                            }
                             break;
                         default:
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            doDefault();
                     }
                 }
             }
@@ -761,6 +808,25 @@
                     "accountID": this.transaction.accountID
                 };
 
+                // add BF-only attributes here
+                var additional = {};
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
                 // and re-submit
                 this.doAuthCapture(payload);
             }
@@ -782,7 +848,7 @@
             'number': 'number',
             'exp-date': 'expiration_date',
             'exp-month': 'expiration_month',
-            'exp-year': 'expiration_year'
+            'exp-year': 'expiration_year',
         };
 
         TheClass.mappingsProgrammatic = {
@@ -802,8 +868,8 @@
             'address-city': 'locality',
             'address-country': 'countryName',
             'address-province': 'region',
-            'first-name': 'firstName',
-            'last-name': 'lastName'
+            'name-first': 'firstName',
+            'name-last': 'lastName'
             //'company': 'company',
         };
 
@@ -1020,7 +1086,9 @@
 
         // these, if present, will be thrown straight into BF authCapture request.
         TheClass.bfBypass = {
-            'company-name': 'companyName'
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1078,7 +1146,7 @@
             
             var tokenInfo = {};
             
-            for (var i in TheClass.mappings) {
+            /*for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm;
                 if (this.transaction.state.cardDetails) {
@@ -1112,8 +1180,89 @@
                             tokenInfo['first_name'] = firstName;
                             tokenInfo['last_name'] = lastName;
                             break;
+                        case 'first_name':
+                            // if this was already populated by cardholder name split, concede authority
+                            if (tokenInfo['first_name']) break;
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            break;
+                        case 'last_name':
+                            // if this was already populated by cardholder name split, concede authority
+                            if (tokenInfo['last_name']) break;
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            break;
                         default:
                             tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
+                }
+            }*/
+
+            var resolvedValues = (function(mappings) {
+                var map = {};
+
+                for (var i in mappings) {
+                    var mapping = mappings[i];
+                    var valueFromForm;
+                    valueFromForm = this.transaction.state.cardDetails
+                    ? this.transaction.state.cardDetails[i]
+                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+
+                    map[i] = valueFromForm;
+                }
+
+                return map;
+            })
+            .call(this, TheClass.mappings);
+
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
+            };
+            
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
+                
+                if (valueFromForm) {
+                    switch (i) {
+                        case 'exp-date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
+                            break;
+                        case 'exp-month':
+                        case 'exp-year':
+                            // concede fealty
+                            if (resolvedValues['exp-date']) break;
+                            doDefault(); break;
+                        case 'cardholder-name':
+                            // gotta split this
+                            var parts = (valueFromForm||"").split(" ");
+                            var firstName;
+                            var lastName;
+                            if (parts.length<2) {
+                                // I guess assume they only provided a first name?
+                                firstName = parts[0];
+                                lastName = "";
+                            } else {
+                                // we'll consider the final word to be the surname; everything else is first name.
+                                firstName = parts.slice(0, -1).join(' ');
+                                lastName = parts.slice(-1).join(' ');
+                            }
+                            setKeyToVal('name-first', firstName);
+                            setKeyToVal('name-last', lastName);
+                            break;
+                        case 'name-last':
+                        case 'name-first':
+                            // concede fealty
+                            if (resolvedValues['cardholder-name']) break;
+                            doDefault(); break;
+                        default:
+                            doDefault();
                     }
                 }
             }

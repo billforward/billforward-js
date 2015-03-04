@@ -111,6 +111,7 @@ Note that the 'submit' button is set to `disabled="true"`; BillForward.js will e
 
 `bf-data` attributes are used to signify which form elements are to be used in the tokenization. We capture all provided `bf-data` attributes, and pass on to the gateway any of these attributes that it supports.
 
+####Form attributes
 Here is the current list of `bf-data` attributes:
 
 ```
@@ -126,11 +127,48 @@ address-city
 address-province	// use this for 'state' in America
 address-zip
 address-country		// in the format 'United Kingdom'
-first-name
-last-name
+name-first
+name-last
 ```
 
 All are assumed to be the String datatype.
+
+#####Dates
+`exp-month` is formatted MM. 
+`exp-year` is formatted YYYY. 
+`exp-date` is formatted MM/YYYY. 
+
+`exp-date` interacts with `exp-month` and `exp-year` in the following way:
+
+- If only `exp-date` is provided:
+ * Gateways that require a single MM/YYYY field will use `exp-date`.
+ * Gateways that require separate MM and YYYY field will use a split `exp-date`.
+- If only `exp-month` and `exp-year` are provided:
+ * Gateways that require a single MM/YYYY field will use a slash concatenation of `exp-month` and `exp-year`.
+ * Gateways that require separate MM and YYYY field will use `exp-month` and `exp-year`.
+- If `exp-date`, `exp-month` and `exp-year` are all provided:
+ * This is interpeted the same way as if just `exp-date` was provided.
+
+In other words: where `exp-date` is present, it becomes authoritative.
+
+#####Names
+`cardholder-name` interacts with `name-first` and `name-last` in the following way:
+
+- If only `cardholder-name` is provided:
+ * Gateways that require a full name will use `cardholder-name`.
+ * Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+ * BillForward Profile will use the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+- If `cardholder-name`, `name-first` and `name-last` are all provided:
+ * Gateways that require a full name will use `cardholder-name`.
+ * Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+ * BillForward Profile will be named using `name-first` and `name-last`.
+- If only `name-first` and `name-last` are provided:
+ * Gateways that require a full name will use a space-concatenation of `name-first` and `name-last`.
+ * Gateways that require a first/last name split will receive `name-first` and `name-last`.
+ * BillForward Profile will be named using `name-first` and `name-last`.
+
+In other words: where `cardholder-name` is present, it becomes authoritative; `name-first` and `name-last` are then used only as BillForward profile metadata. 
+When `cardholder-name` is absent, `name-first` and `name-last` are authoritative. 
 
 ###Invoke card capture
 You can now invoke BillForward.js.
