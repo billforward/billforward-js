@@ -1018,6 +1018,11 @@
             'email': 'email',
         };
 
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'company-name': 'companyName'
+        };
+
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
@@ -1167,6 +1172,25 @@
                     "cardToken": token,
                     "accountID": this.transaction.accountID
                 };
+
+                // add BF-only attributes here
+                var additional = {};
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
 
                 return this.doAuthCapture(payload);
             } else {
