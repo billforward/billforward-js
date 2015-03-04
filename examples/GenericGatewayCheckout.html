@@ -18,7 +18,7 @@
            // Jquery-style selector pointing to your form
            var formSelector = '#payment-form';
 
-           BillForward.captureCardOnSubmit(formSelector, 'spreedly', accountID, callback);
+           BillForward.captureCardOnSubmit(formSelector, 'generic', accountID, callback);
            
            function callback(paymentMethod, error) {
 				if (error) {

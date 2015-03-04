@@ -130,7 +130,7 @@
     bfjs.SpreedlyGateway = (function() {
         var TheClass = function() {
             // statics
-            this.key = 'spreedly';
+            this.key = 'generic';
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1189,20 +1189,20 @@
     bfjs.gatewayInstances = {
         'stripe': bfjs.StripeGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
-        'spreedly': bfjs.SpreedlyGateway.construct()
+        'generic': bfjs.SpreedlyGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
         'braintree': bfjs.BraintreeTransaction,
-        'spreedly': bfjs.SpreedlyTransaction
+        'generic': bfjs.SpreedlyTransaction
     };
 
     bfjs.lateActors = [
         bfjs.core,
         bfjs.gatewayInstances['stripe'],
         bfjs.gatewayInstances['braintree'],
-        bfjs.gatewayInstances['spreedly']
+        bfjs.gatewayInstances['generic']
     ];
 
     bfjs.state = {
@@ -1356,7 +1356,7 @@
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'braintree':
-                case 'spreedly':
+                case 'generic':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
