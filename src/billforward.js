@@ -732,6 +732,10 @@
                 return map;
             })
             .call(this, TheClass.mappings);
+
+            var doDefault = function(i) {
+                tokenInfo[TheClass.mappings[i]] = valueFromForm;
+            };
             
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
@@ -750,6 +754,7 @@
                         case 'exp-year':
                             // concede fealty
                             if (resolvedValues['exp-date']) break;
+                            doDefault(i); break;
                         case 'name-last': break;
                         case 'name-first':
                             if (!resolvedValues['cardholder-name']) {
@@ -762,7 +767,7 @@
                             }
                             break;
                         default:
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            doDefault(i);
                     }
                 }
             }
@@ -1075,6 +1080,8 @@
         // these, if present, will be thrown straight into BF authCapture request.
         TheClass.bfBypass = {
             'company-name': 'companyName',
+            'name-first': 'firstName'
+            'name-last': 'lastName'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1198,6 +1205,10 @@
                 return map;
             })
             .call(this, TheClass.mappings);
+
+            var doDefault = function(i) {
+                tokenInfo[TheClass.mappings[i]] = valueFromForm;
+            };
             
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
@@ -1216,6 +1227,7 @@
                         case 'exp-year':
                             // concede fealty
                             if (resolvedValues['exp-date']) break;
+                            doDefault(i); break;
                         case 'cardholder-name':
                             // gotta split this
                             var parts = (valueFromForm||"").split(" ");
@@ -1232,12 +1244,14 @@
                             }
                             tokenInfo[TheClass.mappings['name-first']] = firstName;
                             tokenInfo[TheClass.mappings['name-last']] = lastName;
+                            break;
                         case 'name-last':
                         case 'name-first':
                             // concede fealty
                             if (resolvedValues['cardholder-name']) break;
+                            doDefault(i); break;
                         default:
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            doDefault(i);
                     }
                 }
             }
