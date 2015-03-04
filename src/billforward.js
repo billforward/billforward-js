@@ -733,13 +733,17 @@
             })
             .call(this, TheClass.mappings);
 
-            var doDefault = function(i) {
-                tokenInfo[TheClass.mappings[i]] = valueFromForm;
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
             };
             
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
                 
                 if (valueFromForm) {
                     switch (i) {
@@ -747,14 +751,14 @@
                             var parts = valueFromForm.split("/");
                             var month = parts[0];
                             var year = parts[1];
-                            tokenInfo[TheClass.mappings['exp-month']] = month;
-                            tokenInfo[TheClass.mappings['exp-year']] = year;
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
                             break;
                         case 'exp-month':
                         case 'exp-year':
                             // concede fealty
                             if (resolvedValues['exp-date']) break;
-                            doDefault(i); break;
+                            doDefault(); break;
                         case 'name-last': break;
                         case 'name-first':
                             if (!resolvedValues['cardholder-name']) {
@@ -763,11 +767,12 @@
                                 resolvedValues['name-first'],
                                 resolvedValues['name-last']
                                 ].join(" ");
-                                tokenInfo[TheClass.mappings['cardholder-name']] = cardHolderName;
+                                
+                                setKeyToVal('cardholder-name', cardHolderName);
                             }
                             break;
                         default:
-                            doDefault(i);
+                            doDefault();
                     }
                 }
             }
@@ -1206,13 +1211,17 @@
             })
             .call(this, TheClass.mappings);
 
-            var doDefault = function(i) {
-                tokenInfo[TheClass.mappings[i]] = valueFromForm;
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
             };
             
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
                 
                 if (valueFromForm) {
                     switch (i) {
@@ -1220,14 +1229,14 @@
                             var parts = valueFromForm.split("/");
                             var month = parts[0];
                             var year = parts[1];
-                            tokenInfo[TheClass.mappings['exp-month']] = month;
-                            tokenInfo[TheClass.mappings['exp-year']] = year;
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
                             break;
                         case 'exp-month':
                         case 'exp-year':
                             // concede fealty
                             if (resolvedValues['exp-date']) break;
-                            doDefault(i); break;
+                            doDefault(); break;
                         case 'cardholder-name':
                             // gotta split this
                             var parts = (valueFromForm||"").split(" ");
@@ -1242,16 +1251,16 @@
                                 firstName = parts.slice(0, -1).join(' ');
                                 lastName = parts.slice(-1).join(' ');
                             }
-                            tokenInfo[TheClass.mappings['name-first']] = firstName;
-                            tokenInfo[TheClass.mappings['name-last']] = lastName;
+                            setKeyToVal('name-first', firstName);
+                            setKeyToVal('name-last', lastName);
                             break;
                         case 'name-last':
                         case 'name-first':
                             // concede fealty
                             if (resolvedValues['cardholder-name']) break;
-                            doDefault(i); break;
+                            doDefault(); break;
                         default:
-                            doDefault(i);
+                            doDefault();
                     }
                 }
             }
