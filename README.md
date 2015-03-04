@@ -134,9 +134,9 @@ name-last
 All are assumed to be the String datatype.
 
 #####Dates
-`exp-month` is formatted MM.
-`exp-year` is formatted YYYY.
-`exp-date` is formatted MM/YYYY.
+`exp-month` is formatted MM. 
+`exp-year` is formatted YYYY. 
+`exp-date` is formatted MM/YYYY. 
 
 `exp-date` interacts with `exp-month` and `exp-year` in the following way:
 
@@ -148,6 +148,8 @@ All are assumed to be the String datatype.
  * Gateways that require separate MM and YYYY field will use `exp-month` and `exp-year`.
 - If `exp-date`, `exp-month` and `exp-year` are all provided:
  * This is interpeted the same way as if just `exp-date` was provided.
+
+In other words: where `exp-date` is present, it becomes authoritative.
 
 #####Names
 `cardholder-name` interacts with `name-first` and `name-last` in the following way:

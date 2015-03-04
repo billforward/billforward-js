@@ -647,6 +647,8 @@
             'address-province': 'address_state',
             'address-zip': 'address_zip',
             'address-country': 'address_country',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
         };
 
         // these, if present, will be thrown straight into BF authCapture request.
@@ -767,7 +769,7 @@
                                 resolvedValues['name-first'],
                                 resolvedValues['name-last']
                                 ].join(" ");
-                                
+
                                 setKeyToVal('cardholder-name', cardHolderName);
                             }
                             break;
