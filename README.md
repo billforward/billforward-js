@@ -118,17 +118,21 @@ Here is the current list of `bf-data` attributes:
 cardholder-name
 cvc
 number
-exp-month			// in the format '01'
-exp-year			// in the format '2016'
-exp-date			// in the format '01/2016'
+exp-month						// in the format '01'
+exp-year						// in the format '2016'
+exp-date						// in the format '01/2016'
 address-line1
 address-line2
 address-city
-address-province	// use this for 'state' in America
+address-province				// use this for 'state' in America
 address-zip
-address-country		// in the format 'United Kingdom'
+address-country					// in the format 'United Kingdom'
 name-first
 name-last
+company-name
+phone-mobile
+email
+use-as-default-payment-method	// defaults to "false"; set to string "true"
 ```
 
 All are assumed to be the String datatype.
