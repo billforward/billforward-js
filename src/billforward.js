@@ -414,10 +414,13 @@
                 4xxx - Card capture failed
               * 4000 --- (Generic)
               * 4001 --- Unhandled BillForward server error
+              * 4002 --- Handled BillForward server error
                 41xx --- Card declined
               * 4100 ----- (Generic)
                 42xx --- Input validation failure
-              * 4200 ----- (Generic)
+                4200 ----- (Generic)
+                43xx --- Failure between BillForward server and gateway
+              * 4300 ----- (Generic)
             */
 
             var error = {
@@ -471,13 +474,20 @@
                         error.message = "Auth-capture failed.";
                         switch (json.errorType) {
                             case 'BraintreeOperationFailure':
-                                error.code = 4200;
+                            case 'StripeOperationFailure':
+                                error.code = 4300;
                                 var portions = json.errorMessage.split(" Message was: ");
                                 error.message = portions[0];
                                 error.detailObj = {
                                     'message': portions[1]
                                 };
-
+                                break;
+                            case 'TokenizationAuthCaptureFailure':
+                                error.code = 4002;
+                                error.message = "BillForward server encountered a known error during authorized card capture.";
+                                error.detailObj = {
+                                    'message': json.errorMessage
+                                };
                                 break;
                             case 'ServerError':
                             default:
@@ -657,6 +667,8 @@
             'company-name': 'companyName',
             'name-first': 'firstName',
             'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -818,6 +830,12 @@
                         valueFromForm = this.transaction.state.cardDetails[i];
                     } else {
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                            case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
                     }
                     
                     if (valueFromForm) {
@@ -1088,7 +1106,8 @@
         TheClass.bfBypass = {
             'company-name': 'companyName',
             'name-first': 'firstName',
-            'name-last': 'lastName'
+            'name-last': 'lastName',
+            'use-as-default-payment-method':'defaultPaymentMethod'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1332,6 +1351,12 @@
                         valueFromForm = this.transaction.state.cardDetails[i];
                     } else {
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                            case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
                     }
                     
                     if (valueFromForm) {
