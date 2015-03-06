@@ -955,6 +955,19 @@
             this.clientToken = clientToken;
             this.merchantId = merchantId;
             this.environment = environment;
+            var resolvedEnvironment;
+            switch(environment) {
+                    case 'Production':
+                        resolvedEnvironment = BraintreeData.environments.production;
+                        break;
+                    case 'Sandbox':
+                    default:
+                        resolvedEnvironment = BraintreeData.environments.sandbox;
+            }
+            this.resolvedEnvironment = resolvedEnvironment;
+            
+            console.log("env", environment);
+            console.log("resEnv", resolvedEnvironment);
 
             if (failed) {
                 return this.ultimateFailure({
@@ -996,7 +1009,7 @@
                     }
 
                     braintree.setup(clientToken, "paypal", {container: paypalDivId});
-                    BraintreeData.setup(merchantId, formId, environment);
+                    BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
                 //braintree.setup(clientToken, "custom", {id: formId});
             }
@@ -1006,18 +1019,25 @@
 
         p.startAuthCapture = function(data) {
             var self = this;
+            
+            var deviceDataValue;
+            if (!this.transaction.state.cardDetails) {
+                var $formElement = this.transaction.state.$formElement;
+                var deviceDataSelector = $formElement.find("input[name='device_data']");
+                deviceDataValue = deviceDataSelector.val();
+                console.log("dev_d", deviceDataValue);
+            }
 
             var nonceValue;
             if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
                 // check for a nonce
                 var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
-                var deviceDataSelector = $paypalSelector.find("input[name='device_data']");
+                
                 nonceValue = nonceSelector.val();
-                var deviceDataValue = deviceDataSelector.val();
                 if (nonceValue) {
                     //this.gatewayResponseHandler(null, nonceValue);
-                    self.gatewayResponseHandler.apply(self, [null, nonceValue, deviceDataValue]);
+                    self.gatewayResponseHandler.apply(self, [null, deviceDataValue, nonceValue]);
                     return;
                 }
             }
@@ -1064,11 +1084,16 @@
 
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
-                self.gatewayResponseHandler.apply(self, arguments);
+                var argumentsArr = [];
+                for (var a = 0; a<arguments.length; a++) {
+                    var arg = arguments[a];
+                    argumentsArr.push(arg);
+                }
+                self.gatewayResponseHandler.apply(self, [deviceDataValue].concat(argumentsArr));
             });
         };
 
-        p.gatewayResponseHandler = function(err, nonce, deviceData) {
+        p.gatewayResponseHandler = function(err, deviceData, nonce) {
             if (err) {
                 var bfjsError = {
                     code: 3000,
