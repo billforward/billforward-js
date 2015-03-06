@@ -890,6 +890,14 @@
             'name-last': 'lastName'
             //'company': 'company',
         };
+        
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'use-as-default-payment-method':'defaultPaymentMethod'
+        };
 
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
@@ -930,17 +938,36 @@
         p.oncePreAuthed = function() {
             var data = this.preAuthResponsePayload;
             var clientToken;
+            var merchantId;
+            var environment;
             var failed = false;
             try {
                 clientToken = data.results[0].clientToken;
-                if (!data.results[0].clientToken) {
+                merchantId = data.results[0].merchantId;
+                environment = data.results[0].environment;
+                if (!clientToken || !merchantId || !environment) {
                     failed = true;
-                }   
+                }
             } catch (e){
                 failed = true;
             }
 
             this.clientToken = clientToken;
+            this.merchantId = merchantId;
+            this.environment = environment;
+            var resolvedEnvironment;
+            switch(environment) {
+                    case 'Production':
+                        resolvedEnvironment = BraintreeData.environments.production;
+                        break;
+                    case 'Sandbox':
+                    default:
+                        resolvedEnvironment = BraintreeData.environments.sandbox;
+            }
+            this.resolvedEnvironment = resolvedEnvironment;
+            
+            console.log("env", environment);
+            console.log("resEnv", resolvedEnvironment);
 
             if (failed) {
                 return this.ultimateFailure({
@@ -982,6 +1009,7 @@
                     }
 
                     braintree.setup(clientToken, "paypal", {container: paypalDivId});
+                    BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
                 //braintree.setup(clientToken, "custom", {id: formId});
             }
@@ -991,16 +1019,25 @@
 
         p.startAuthCapture = function(data) {
             var self = this;
+            
+            var deviceDataValue;
+            if (!this.transaction.state.cardDetails) {
+                var $formElement = this.transaction.state.$formElement;
+                var deviceDataSelector = $formElement.find("input[name='device_data']");
+                deviceDataValue = deviceDataSelector.val();
+                console.log("dev_d", deviceDataValue);
+            }
 
             var nonceValue;
             if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
                 // check for a nonce
                 var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
+                
                 nonceValue = nonceSelector.val();
                 if (nonceValue) {
                     //this.gatewayResponseHandler(null, nonceValue);
-                    self.gatewayResponseHandler.apply(self, [null, nonceValue]);
+                    self.gatewayResponseHandler.apply(self, [null, deviceDataValue, nonceValue]);
                     return;
                 }
             }
@@ -1047,11 +1084,16 @@
 
             var client = new braintree.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
-                self.gatewayResponseHandler.apply(self, arguments);
+                var argumentsArr = [];
+                for (var a = 0; a<arguments.length; a++) {
+                    var arg = arguments[a];
+                    argumentsArr.push(arg);
+                }
+                self.gatewayResponseHandler.apply(self, [deviceDataValue].concat(argumentsArr));
             });
         };
 
-        p.gatewayResponseHandler = function(err, nonce) {
+        p.gatewayResponseHandler = function(err, deviceData, nonce) {
             if (err) {
                 var bfjsError = {
                     code: 3000,
@@ -1067,6 +1109,35 @@
                     "paymentMethodNonce": nonce,
                     "accountID": this.transaction.accountID
                 };
+                
+                if (deviceData) {
+                    payload.deviceData = deviceData;
+                }
+
+                // add BF-only attributes here
+                var additional = {};
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                            case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
 
                 // and re-submit
                 this.doAuthCapture(payload);
@@ -1416,16 +1487,30 @@
         var queue = [];
         for (var i=0; i<bfjs.lateActors.length; i++) {
             var actor = bfjs.lateActors[i];
-
-            if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
-                actor.loadedCallback.call(actor);
-            } else {
-                queue.push({
-                    actor: actor,
-                    src: actor.depUrl,
-                    callback: actor.loadedCallback
-                });
-            }
+            
+            var loadedCallback = actor.loadedCallback;
+            
+            switch (actor.depName) {
+                    case 'braintree':
+                        if(typeof window.BraintreeData === 'undefined') {
+                            // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
+                            loadedCallback = function() {
+                                var url = "https://js.braintreegateway.com/v1/braintree-data.js";
+                                
+                                bfjs.loadScript(url, actor.loadedCallback, actor);
+                            };
+                        }
+                    default:
+                        if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
+                            loadedCallback.call(actor);
+                        } else {
+                            queue.push({
+                                actor: actor,
+                                src: actor.depUrl,
+                                callback: loadedCallback
+                            });
+                        }
+            }            
         }
 
         for (var i = 0; i<queue.length; i++) {
@@ -1503,10 +1588,10 @@
                 
                 bfjs.core.doWhenReady(newTransaction);
             } else {
-                throw "You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
+                throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
             }
         } else {
-            throw "You need to first call BillForward.useAPI() will BillForward credentials";
+            throw new Error("You need to first call BillForward.useAPI() will BillForward credentials");
         }
     };
 
@@ -1537,10 +1622,10 @@
         if (resolved === 'braintree+paypal') {
             resolved = 'braintree';
             if (!bfjs.gatewayInstances[resolved].usePaypal) {
-                throw "You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button";
+                throw new Error("You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button");
             }
             if (cardDetails) {
-                throw "Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway."
+                throw new Error("Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway.")
             }
         }
 
