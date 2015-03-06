@@ -930,17 +930,23 @@
         p.oncePreAuthed = function() {
             var data = this.preAuthResponsePayload;
             var clientToken;
+            var merchantId;
+            var environment;
             var failed = false;
             try {
                 clientToken = data.results[0].clientToken;
-                if (!data.results[0].clientToken) {
+                merchantId = data.results[0].merchantId;
+                environment = data.results[0].environment;
+                if (!clientToken || !merchantId || !environment) {
                     failed = true;
-                }   
+                }
             } catch (e){
                 failed = true;
             }
 
             this.clientToken = clientToken;
+            this.merchantId = merchantId;
+            this.environment = environment;
 
             if (failed) {
                 return this.ultimateFailure({
@@ -982,6 +988,7 @@
                     }
 
                     braintree.setup(clientToken, "paypal", {container: paypalDivId});
+                    BraintreeData.setup(merchantId, formId, environment);
                 }
                 //braintree.setup(clientToken, "custom", {id: formId});
             }
@@ -1416,16 +1423,30 @@
         var queue = [];
         for (var i=0; i<bfjs.lateActors.length; i++) {
             var actor = bfjs.lateActors[i];
-
-            if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
-                actor.loadedCallback.call(actor);
-            } else {
-                queue.push({
-                    actor: actor,
-                    src: actor.depUrl,
-                    callback: actor.loadedCallback
-                });
-            }
+            
+            var loadedCallback = actor.loadedCallback;
+            
+            switch (actor.depName) {
+                    case 'braintree':
+                        if(typeof window.BraintreeData === 'undefined') {
+                            // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
+                            loadedCallback = function() {
+                                var url = "https://js.braintreegateway.com/v1/braintree-data.js";
+                                
+                                bfjs.loadScript(url, actor.loadedCallback, actor);
+                            };
+                        }
+                    default:
+                        if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
+                            loadedCallback.call(actor);
+                        } else {
+                            queue.push({
+                                actor: actor,
+                                src: actor.depUrl,
+                                callback: loadedCallback
+                            });
+                        }
+            }            
         }
 
         for (var i = 0; i<queue.length; i++) {
@@ -1503,10 +1524,10 @@
                 
                 bfjs.core.doWhenReady(newTransaction);
             } else {
-                throw "You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree'])";
+                throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
             }
         } else {
-            throw "You need to first call BillForward.useAPI() will BillForward credentials";
+            throw new Error("You need to first call BillForward.useAPI() will BillForward credentials");
         }
     };
 
@@ -1537,10 +1558,10 @@
         if (resolved === 'braintree+paypal') {
             resolved = 'braintree';
             if (!bfjs.gatewayInstances[resolved].usePaypal) {
-                throw "You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button";
+                throw new Error("You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button");
             }
             if (cardDetails) {
-                throw "Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway."
+                throw new Error("Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway.")
             }
         }
 
