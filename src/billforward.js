@@ -127,6 +127,36 @@
         return TheClass;
     })();
 
+    bfjs.BraintreeGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'braintree';
+            this.depUrl = "https://assets.braintreegateway.com/v2/braintree.js";
+            this.depName = "braintree";
+            this.usePaypal = false;
+            this.paypalButtonSelector = null;
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.SpreedlyGateway = (function() {
         var TheClass = function() {
             // statics
@@ -153,14 +183,11 @@
         return TheClass;
     })();
 
-    bfjs.BraintreeGateway = (function() {
+    bfjs.SagePayGateway = (function() {
         var TheClass = function() {
             // statics
-            this.key = 'braintree';
-            this.depUrl = "https://assets.braintreegateway.com/v2/braintree.js";
-            this.depName = "braintree";
-            this.usePaypal = false;
-            this.paypalButtonSelector = null;
+            this.key = 'sagepay';
+            this.sagePayFormContainerSelector = null;
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1452,26 +1479,314 @@
         return TheClass;
     })();
 
+    bfjs.SagePayTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p.do = function() {
+            var payload = {
+                "@type": "SagePayPreAuthRequest",
+                "gateway": "SagePay"
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var spreedlyEnvKey;
+            var failed = false;
+            try {
+                spreedlyEnvKey = data.results[0].publicKey;
+                if (!data.results[0].publicKey) {
+                    failed = true;
+                }   
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+            
+            var tokenInfo = {};
+            
+            /*for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm;
+                if (this.transaction.state.cardDetails) {
+                    valueFromForm = this.transaction.state.cardDetails[i];
+                } else {
+                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                }
+                
+                if (valueFromForm) {
+                    switch (mapping) {
+                        case 'exp_date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            tokenInfo['expMonth'] = month;
+                            tokenInfo['expYear'] = year;
+                            break;
+                        case 'name':
+                            var parts = (valueFromForm||"").split(" ");
+                            var firstName;
+                            var lastName;
+                            if (parts.length<2) {
+                                // I guess assume they only provided a first name?
+                                firstName = parts[0];
+                                lastName = "";
+                            } else {
+                                // we'll consider the final word to be the surname; everything else is first name.
+                                firstName = parts.slice(0, -1).join(' ');
+                                lastName = parts.slice(-1).join(' ');
+                            }
+                            tokenInfo['first_name'] = firstName;
+                            tokenInfo['last_name'] = lastName;
+                            break;
+                        case 'first_name':
+                            // if this was already populated by cardholder name split, concede authority
+                            if (tokenInfo['first_name']) break;
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            break;
+                        case 'last_name':
+                            // if this was already populated by cardholder name split, concede authority
+                            if (tokenInfo['last_name']) break;
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                            break;
+                        default:
+                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                    }
+                }
+            }*/
+
+            var resolvedValues = (function(mappings) {
+                var map = {};
+
+                for (var i in mappings) {
+                    var mapping = mappings[i];
+                    var valueFromForm;
+                    valueFromForm = this.transaction.state.cardDetails
+                    ? this.transaction.state.cardDetails[i]
+                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+
+                    map[i] = valueFromForm;
+                }
+
+                return map;
+            })
+            .call(this, TheClass.mappings);
+
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
+            };
+            
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
+                
+                if (valueFromForm) {
+                    switch (i) {
+                        case 'exp-date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
+                            break;
+                        case 'exp-month':
+                        case 'exp-year':
+                            // concede fealty
+                            if (resolvedValues['exp-date']) break;
+                            doDefault(); break;
+                        case 'cardholder-name':
+                            // gotta split this
+                            var parts = (valueFromForm||"").split(" ");
+                            var firstName;
+                            var lastName;
+                            if (parts.length<2) {
+                                // I guess assume they only provided a first name?
+                                firstName = parts[0];
+                                lastName = "";
+                            } else {
+                                // we'll consider the final word to be the surname; everything else is first name.
+                                firstName = parts.slice(0, -1).join(' ');
+                                lastName = parts.slice(-1).join(' ');
+                            }
+                            setKeyToVal('name-first', firstName);
+                            setKeyToVal('name-last', lastName);
+                            break;
+                        case 'name-last':
+                        case 'name-first':
+                            // concede fealty
+                            if (resolvedValues['cardholder-name']) break;
+                            doDefault(); break;
+                        default:
+                            doDefault();
+                    }
+                }
+            }
+
+            var self = this;
+
+            tokenInfo['environment_key'] = spreedlyEnvKey;
+
+            // Serialize and URI encode parameters.
+            var paramStr = $.param(tokenInfo);
+
+            var url = "https://core.spreedly.com/v1/payment_methods.js?"+ paramStr;
+            var ajaxObj = {
+              type: "GET",
+              url: url,
+              dataType: "jsonp",
+              async: true
+            };
+
+            $.ajax(ajaxObj)
+            .done(function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                var bfjsError = {
+                    detailObj: jqXHR,
+                    message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
+                    code: 3100
+                };
+
+                // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+                self.ultimateFailure(bfjsError);
+            });
+        };
+
+        p.gatewayResponseHandler = function(data) {
+            if (data.status === 201) {
+                var parseFailure = false;
+                try {
+                    var token = data.transaction.payment_method.token;
+                } catch(e) {
+                    parseFailure = true;
+                }
+                if (parseFailure || !token) {
+                    var bfjsError = {
+                        code: 3200,
+                        message: "Card capture to Spreedly failed; token not in promised location within response.",
+                        detailObj: data
+                    };
+                    return this.ultimateFailure(bfjsError);
+                }
+
+                var payload = {
+                    "@type": 'SagePayAuthCaptureRequest',
+                    "gateway": "SagePay",
+                    "cardToken": token,
+                    "accountID": this.transaction.accountID
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                            case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                return this.doAuthCapture(payload);
+            } else {
+                var bfjsError = {
+                    code: 3000,
+                    message: "Card capture to SagePay failed.",
+                    detailObj: data
+                };
+                // Show the errors on the form
+                return this.ultimateFailure(bfjsError);
+            }
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
     bfjs.gatewayInstances = {
         'stripe': bfjs.StripeGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
-        'generic': bfjs.SpreedlyGateway.construct()
+        'generic': bfjs.SpreedlyGateway.construct(),
+        'sagepay': bfjs.SagePayGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
         'braintree': bfjs.BraintreeTransaction,
-        'generic': bfjs.SpreedlyTransaction
+        'generic': bfjs.SpreedlyTransaction,
+        'sagepay': bfjs.SagePayTransaction
     };
 
     bfjs.lateActors = [
         bfjs.core,
         bfjs.gatewayInstances['stripe'],
         bfjs.gatewayInstances['braintree'],
-        bfjs.gatewayInstances['generic']
+        bfjs.gatewayInstances['generic'],
+        bfjs.gatewayInstances['sagepay']
     ];
 
     bfjs.state = {
@@ -1616,17 +1931,32 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
+    bfjs.addSagePayForm = function(selector) {
+        // supported for SagePay only
+        bfjs.gatewayInstances['braintree'].sagePayFormContainerSelector = selector;
+    };
+
     bfjs.resolveGatewayName = function(name, cardDetails) {
         var lowerCase = name.toLowerCase();
         var resolved = lowerCase;
-        if (resolved === 'braintree+paypal') {
-            resolved = 'braintree';
-            if (!bfjs.gatewayInstances[resolved].usePaypal) {
-                throw new Error("You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button");
-            }
-            if (cardDetails) {
-                throw new Error("Programmatic access is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway.")
-            }
+        switch(resolved) {
+            case 'braintree+paypal':
+                resolved = 'braintree';
+                if (!bfjs.gatewayInstances[resolved].usePaypal) {
+                    throw new Error("You need first to call BillForward.addPayPalButton() with a Jquery-style selector to your PayPal button");
+                }
+                if (cardDetails) {
+                    throw new Error("Formless invocation is not available for Braintree+PayPal. You must use BillForward.captureCardOnSubmit(), or switch to the 'braintree' gateway.");
+                }
+                break;
+            case 'sagepay':
+                if (!bfjs.gatewayInstances[resolved].sagePayFormContainerSelector) {
+                    throw new Error("You need first to call BillForward.addSagePayForm() with a Jquery-style selector to some <div> into which BillForward.js can inject the SagePay form.");
+                }
+                if (!cardDetails) {
+                    throw new Error("Custom form invocation is not available for SagePay. You must use BillForward.captureCard().");
+                }
+                break;
         }
 
         return resolved;
@@ -1640,6 +1970,7 @@
                 case 'stripe':
                 case 'braintree':
                 case 'generic':
+                case 'sagepay':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
