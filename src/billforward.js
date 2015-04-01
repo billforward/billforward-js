@@ -1890,7 +1890,7 @@
 
         if (bfjs.core.hasBfCredentials) {
             if (!bfjs.core.gatewayChosen) {
-                bfjs.loadGateways([resolvedGateway]);
+                bfjs.loadGateways([resolvedGateway], cardDetails);
             }
 
             if (bfjs.core.gatewayChosen){
@@ -1933,7 +1933,7 @@
 
     bfjs.addSagePayForm = function(selector) {
         // supported for SagePay only
-        bfjs.gatewayInstances['braintree'].sagePayFormContainerSelector = selector;
+        bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
@@ -1962,10 +1962,10 @@
         return resolved;
     };
 
-    bfjs.loadGateways = function(gateways) {
+    bfjs.loadGateways = function(gateways, cardDetails) {
        for (i = 0; i < gateways.length; i++) {
             var gateway = gateways[i];
-            var resolvedName = bfjs.resolveGatewayName(gateway);
+            var resolvedName = bfjs.resolveGatewayName(gateway, cardDetails);
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'braintree':
