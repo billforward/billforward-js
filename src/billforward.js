@@ -1574,16 +1574,6 @@
             
             var tokenInfo = {};
 
-            var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
-            var registrationRequesterID = "bf-sagePayRegistrationRequester";
-            $sagePayFormContainerSelector.append('<form id="'+registrationRequesterID+'"></form>');
-            var $registrationRequester = $("#"+registrationRequesterID);
-            
-            var addPostVariable = function($form, varName, value) {
-                // add as 'hidden' form variables those values we wish to submit
-                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
-            }
-
             var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
             var auth = this.transaction.bfjs.state.api.token;
 
@@ -1596,8 +1586,19 @@
                 VendorTxCode: payload.vendorTxCode,
                 Currency: payload.currency,
                 Profile: "LOW",
-                Language: "EN"
+                Language: "EN",
+                NotificationURL: callbackURL
             };
+
+            /*var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
+            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+            $sagePayFormContainerSelector.append('<form id="'+registrationRequesterID+'" style="display:none;"></form>');
+            var $registrationRequester = $("#"+registrationRequesterID);
+            
+            var addPostVariable = function($form, varName, value) {
+                // add as 'hidden' form variables those values we wish to submit
+                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
+            }            
 
             for (var i in postVars) {
                 addPostVariable($registrationRequester, i, postVars[i]);
@@ -1606,9 +1607,22 @@
             $registrationRequester.attr("action", sagePayRegistrationURL);
             $registrationRequester.attr("method", "POST");
 
-            /*// submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
-            $(formSelector).get(0).submit();
+            $registrationRequester.get(0).submit();
             */
+
+            var ajaxObj = {
+                type: "POST",
+                url: sagePayRegistrationURL,
+                data: JSON.stringify(postVars),
+                crossDomain: true,
+                async: true,
+                headers: {
+                },
+            }
+
+            $.ajax(ajaxObj)
+            .success(console.log)
+            .fail(console.error);
             
             
             /*for (var i in TheClass.mappings) {
