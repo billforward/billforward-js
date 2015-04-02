@@ -428,6 +428,8 @@
                 202x --- Precondition failed
               * 2020 ----- (Generic)
               * 2021 ----- Specified gateway not configured
+                203x --- BillForward server proposed an unsupported operation
+              * 2030 ----- (Generic)
 
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
@@ -1513,7 +1515,9 @@
         p.do = function() {
             var payload = {
                 "@type": "SagePayPreAuthRequest",
-                "gateway": "SagePay"
+                "gateway": "SagePay",
+                "currency": "GBP",
+                "VPSProtocol": "3.00"
             }
 
             if(this.transaction.bfjs.state.api.organizationID != null) {
@@ -1527,11 +1531,17 @@
         };
 
         p.startAuthCapture = function(data) {
-            var spreedlyEnvKey;
             var failed = false;
+            var payload;
             try {
-                spreedlyEnvKey = data.results[0].publicKey;
-                if (!data.results[0].publicKey) {
+                payload = data.results[0];
+                if (!payload.VPSProtocol
+                    || !payload.vendor
+                    || !payload.vendorTxCode
+                    || !payload.currency
+                    || !payload.notificationEndpoint
+                    || !payload.environment
+                    ) {
                     failed = true;
                 }   
             } catch (e){
@@ -1545,8 +1555,61 @@
                     detailObj: data
                 });
             }
+
+            var sagePayRegistrationURL;
+            switch(payload.environment) {
+                case 'Sandbox':
+                sagePayRegistrationURL = "https://test.sagepay.com/gateway/service/token.vsp";
+                break;
+                case 'Production':
+                sagePayRegistrationURL = "https://live.sagepay.com/gateway/service/token.vsp";
+                break;
+                default:
+                return this.ultimateFailure({
+                    code: 2030,
+                    message: "Preauthorization failed. An unsupported operation was proposed.",
+                    detailObj: data
+                });
+            }
             
             var tokenInfo = {};
+
+            var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
+            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+            $sagePayFormContainerSelector.append('<form id="'+registrationRequesterID+'"></form>');
+            var $registrationRequester = $("#"+registrationRequesterID);
+            
+            var addPostVariable = function($form, varName, value) {
+                // add as 'hidden' form variables those values we wish to submit
+                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
+            }
+
+            var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
+            var auth = this.transaction.bfjs.state.api.token;
+
+            var callbackURL = fullURL+"?access_token="+auth;
+
+            var postVars = {
+                VPSProtocol: payload.VPSProtocol,
+                TxType: "TOKEN",
+                Vendor: payload.vendor,
+                VendorTxCode: payload.vendorTxCode,
+                Currency: payload.currency,
+                Profile: "LOW",
+                Language: "EN"
+            };
+
+            for (var i in postVars) {
+                addPostVariable($registrationRequester, i, postVars[i]);
+            }
+
+            $registrationRequester.attr("action", sagePayRegistrationURL);
+            $registrationRequester.attr("method", "POST");
+
+            /*// submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
+            $(formSelector).get(0).submit();
+            */
+            
             
             /*for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
@@ -1598,7 +1661,7 @@
                 }
             }*/
 
-            var resolvedValues = (function(mappings) {
+            /*var resolvedValues = (function(mappings) {
                 var map = {};
 
                 for (var i in mappings) {
@@ -1697,7 +1760,7 @@
 
                 // maybe should only go to ultimate failure if ALL gateways fail to tokenize
                 self.ultimateFailure(bfjsError);
-            });
+            });*/
         };
 
         p.gatewayResponseHandler = function(data) {
