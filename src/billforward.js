@@ -1578,6 +1578,8 @@
             var auth = this.transaction.bfjs.state.api.token;
 
             var callbackURL = fullURL+"?access_token="+auth;
+            // var callbackURL = fullURL;
+            // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
 
             var postVars = {
                 VPSProtocol: payload.VPSProtocol,
@@ -1607,18 +1609,38 @@
             $registrationRequester.attr("action", sagePayRegistrationURL);
             $registrationRequester.attr("method", "POST");
 
-            $registrationRequester.get(0).submit();
-            */
+            $registrationRequester.get(0).submit();*/
+            
+
+            /*var ajaxObj = {
+                type: "OPTIONS",
+                url: sagePayRegistrationURL,
+                // data: JSON.stringify(postVars),
+                // contentType: 'multipart/form-data',
+                crossDomain: true,
+                // dataType: 'jsonp',
+                async: true,
+            }*/
 
             var ajaxObj = {
                 type: "POST",
                 url: sagePayRegistrationURL,
-                data: JSON.stringify(postVars),
+                data: postVars,
+                contentType: 'application/x-www-form-urlencoded',
                 crossDomain: true,
+                // dataType: 'jsonp',
                 async: true,
                 headers: {
-                },
+                    // 'Connection': 'keep-alive',
+                    // 'Content-Length': '315',
+                    'Cache-Control': 'max-age=0',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    // 'Accept-Encoding': 'gzip, deflate',
+                    'Accept-Language': 'en-US,en;q=0.8',
+                    'Access-Control-Allow-Origin': '*'
+                }
             }
+
 
             $.ajax(ajaxObj)
             .success(console.log)
