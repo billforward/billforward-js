@@ -1517,7 +1517,9 @@
                 "@type": "SagePayPreAuthRequest",
                 "gateway": "SagePay",
                 "currency": "GBP",
-                "VPSProtocol": "3.00"
+                "VPSProtocol": "3.00",
+                "formProfile": "LOW",
+                "billForwardURL": this.transaction.bfjs.state.api.url
             }
 
             if(this.transaction.bfjs.state.api.organizationID != null) {
@@ -1531,7 +1533,7 @@
         };
 
         p.startAuthCapture = function(data) {
-            var failed = false;
+            /*var failed = false;
             var payload;
             try {
                 payload = data.results[0];
@@ -1572,25 +1574,25 @@
                 });
             }
             
-            var tokenInfo = {};
+            var tokenInfo = {};*/
 
-            var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
-            var auth = this.transaction.bfjs.state.api.token;
+            // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
+            // var auth = this.transaction.bfjs.state.api.token;
 
-            var callbackURL = fullURL+"?access_token="+auth;
-            // var callbackURL = fullURL;
-            // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
+            // var callbackURL = fullURL+"?access_token="+auth;
+            // // var callbackURL = fullURL;
+            // // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
 
-            var postVars = {
-                VPSProtocol: payload.VPSProtocol,
-                TxType: "TOKEN",
-                Vendor: payload.vendor,
-                VendorTxCode: payload.vendorTxCode,
-                Currency: payload.currency,
-                Profile: "LOW",
-                Language: "EN",
-                NotificationURL: callbackURL
-            };
+            // var postVars = {
+            //     VPSProtocol: payload.VPSProtocol,
+            //     TxType: "TOKEN",
+            //     Vendor: payload.vendor,
+            //     VendorTxCode: payload.vendorTxCode,
+            //     Currency: payload.currency,
+            //     Profile: "LOW",
+            //     Language: "EN",
+            //     NotificationURL: callbackURL
+            // };
 
             /*var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
             var registrationRequesterID = "bf-sagePayRegistrationRequester";
@@ -1622,29 +1624,29 @@
                 async: true,
             }*/
 
-            var ajaxObj = {
-                type: "POST",
-                url: sagePayRegistrationURL,
-                data: postVars,
-                contentType: 'application/x-www-form-urlencoded',
-                crossDomain: true,
-                // dataType: 'jsonp',
-                async: true,
-                headers: {
-                    // 'Connection': 'keep-alive',
-                    // 'Content-Length': '315',
-                    'Cache-Control': 'max-age=0',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    // 'Accept-Encoding': 'gzip, deflate',
-                    'Accept-Language': 'en-US,en;q=0.8',
-                    'Access-Control-Allow-Origin': '*'
-                }
-            }
+            // var ajaxObj = {
+            //     type: "POST",
+            //     url: sagePayRegistrationURL,
+            //     data: postVars,
+            //     contentType: 'application/x-www-form-urlencoded',
+            //     crossDomain: true,
+            //     dataType: 'jsonp',
+            //     async: true,
+            //     headers: {
+            //         // 'Connection': 'keep-alive',
+            //         // 'Content-Length': '315',
+            //         'Cache-Control': 'max-age=0',
+            //         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            //         // 'Accept-Encoding': 'gzip, deflate',
+            //         'Accept-Language': 'en-US,en;q=0.8',
+            //         // 'Access-Control-Allow-Origin': '*'
+            //     }
+            // }
 
 
-            $.ajax(ajaxObj)
-            .success(console.log)
-            .fail(console.error);
+            // $.ajax(ajaxObj)
+            // .success(console.log)
+            // .fail(console.error);
             
             
             /*for (var i in TheClass.mappings) {
