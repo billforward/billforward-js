@@ -1519,7 +1519,8 @@
                 "currency": "GBP",
                 "VPSProtocol": "3.00",
                 "formProfile": "LOW",
-                "billForwardURL": this.transaction.bfjs.state.api.url
+                "billForwardURL": this.transaction.bfjs.state.api.url,
+                "billForwardPublicToken": this.transaction.bfjs.state.api.token
             }
 
             if(this.transaction.bfjs.state.api.organizationID != null) {
