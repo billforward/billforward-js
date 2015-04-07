@@ -1524,11 +1524,12 @@
         })();
 
         p.do = function() {
+            this.VPSProtocol = "3.00";
             var payload = {
                 "@type": "SagePayPreAuthRequest",
                 "gateway": "SagePay",
                 "currency": "GBP",
-                "VPSProtocol": "3.00",
+                "VPSProtocol": this.VPSProtocol,
                 "formProfile": "LOW",
                 "billForwardURL": this.transaction.bfjs.state.api.url,
                 "billForwardPublicToken": this.transaction.bfjs.state.api.token
@@ -1545,11 +1546,11 @@
         };
 
         p.startAuthCapture = function(data) {
-            /*var failed = false;
+            var failed = false;
             var payload;
             try {
                 payload = data.results[0];
-                if (!payload.VPSProtocol
+                /*if (!payload.VPSProtocol
                     || !payload.vendor
                     || !payload.vendorTxCode
                     || !payload.currency
@@ -1557,7 +1558,13 @@
                     || !payload.environment
                     ) {
                     failed = true;
-                }   
+                }*/
+
+                if (!payload.VPSProtocol
+                    || !payload.nextURL
+                    ) {
+                    failed = true;
+                }
             } catch (e){
                 failed = true;
             }
@@ -1570,7 +1577,15 @@
                 });
             }
 
-            var sagePayRegistrationURL;
+            if (this.VPSProtocol !== payload.VPSProtocol) {
+                return this.ultimateFailure({
+                    code: 2030,
+                    message: "Preauthorization failed. We do not support SagePay VPSProtocol '"+payload.VPSProtocol+"'.",
+                    detailObj: data
+                });
+            }
+
+            /*var sagePayRegistrationURL;
             switch(payload.environment) {
                 case 'Sandbox':
                 sagePayRegistrationURL = "https://test.sagepay.com/gateway/service/token.vsp";
@@ -1605,6 +1620,13 @@
             //     Language: "EN",
             //     NotificationURL: callbackURL
             // };
+
+            var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
+            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+
+            $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
+            var $registrationRequester = $("#"+registrationRequesterID);
+
 
             /*var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
             var registrationRequesterID = "bf-sagePayRegistrationRequester";
