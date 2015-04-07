@@ -430,6 +430,8 @@
               * 2021 ----- Specified gateway not configured
                 203x --- BillForward server proposed an unsupported operation
               * 2030 ----- (Generic)
+                21xx --- Failure between BillForward server and gateway
+              * 2100 ----- (Generic)
 
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
@@ -491,6 +493,14 @@
                                     error.code = 2021;
                                     error.message = "You must first configure your gateway in the BillForward UI.";
                                 }
+                            case 'SagePayOperationFailure':
+                                error.code = 2100;
+                                var portions = json.errorMessage.split(" Message was: ");
+                                error.message = portions[0];
+                                error.detailObj = {
+                                    'message': portions[1]
+                                };
+                                break;
                             case 'ServerError':
                             default:
                                 if (jqXHR.status === 500) {
@@ -503,6 +513,7 @@
                         error.message = "Auth-capture failed.";
                         switch (json.errorType) {
                             case 'BraintreeOperationFailure':
+                            case 'SagePayOperationFailure':
                             case 'StripeOperationFailure':
                                 error.code = 4300;
                                 var portions = json.errorMessage.split(" Message was: ");
