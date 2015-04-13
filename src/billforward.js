@@ -1431,8 +1431,9 @@
         p.gatewayResponseHandler = function(data) {
             if (data.status === 201) {
                 var parseFailure = false;
+                var token;
                 try {
-                    var token = data.transaction.payment_method.token;
+                    token = data.transaction.payment_method.token;
                 } catch(e) {
                     parseFailure = true;
                 }
@@ -1636,15 +1637,16 @@
 
             var self = this;
 
-            var handleSagePayResponse = function(e) {
+            var handleIFrameResponse = function(e) {
                 var originalEvent = e.originalEvent;
                 console.log(originalEvent);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
                     console.log("awww yiss", originalEvent.data);
+                    self.gatewayResponseHandler.apply(self, originalEvent.data);
                 }
               };
-            $(window).unbind('message', handleSagePayResponse);
-            $(window).bind('message', handleSagePayResponse);
+            $(window).unbind('message', handleIFrameResponse);
+            $(window).bind('message', handleIFrameResponse);
 
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
             var registrationRequesterID = "bf-sagePayRegistrationRequester";
@@ -1654,229 +1656,14 @@
             $registrationRequester.css("border", "none");
             $registrationRequester.width("398px");
             $registrationRequester.height("464px");
-
-
-            //however, error page is: 944 464
-
-            /*var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
-            var registrationRequesterID = "bf-sagePayRegistrationRequester";
-            $sagePayFormContainerSelector.append('<form id="'+registrationRequesterID+'" style="display:none;"></form>');
-            var $registrationRequester = $("#"+registrationRequesterID);
-            
-            var addPostVariable = function($form, varName, value) {
-                // add as 'hidden' form variables those values we wish to submit
-                $form.append($('<input type="hidden" name="'+varName+'" />').val(value));
-            }            
-
-            for (var i in postVars) {
-                addPostVariable($registrationRequester, i, postVars[i]);
-            }
-
-            $registrationRequester.attr("action", sagePayRegistrationURL);
-            $registrationRequester.attr("method", "POST");
-
-            $registrationRequester.get(0).submit();*/
-            
-
-            /*var ajaxObj = {
-                type: "OPTIONS",
-                url: sagePayRegistrationURL,
-                // data: JSON.stringify(postVars),
-                // contentType: 'multipart/form-data',
-                crossDomain: true,
-                // dataType: 'jsonp',
-                async: true,
-            }*/
-
-            // var ajaxObj = {
-            //     type: "POST",
-            //     url: sagePayRegistrationURL,
-            //     data: postVars,
-            //     contentType: 'application/x-www-form-urlencoded',
-            //     crossDomain: true,
-            //     dataType: 'jsonp',
-            //     async: true,
-            //     headers: {
-            //         // 'Connection': 'keep-alive',
-            //         // 'Content-Length': '315',
-            //         'Cache-Control': 'max-age=0',
-            //         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            //         // 'Accept-Encoding': 'gzip, deflate',
-            //         'Accept-Language': 'en-US,en;q=0.8',
-            //         // 'Access-Control-Allow-Origin': '*'
-            //     }
-            // }
-
-
-            // $.ajax(ajaxObj)
-            // .success(console.log)
-            // .fail(console.error);
-            
-            
-            /*for (var i in TheClass.mappings) {
-                var mapping = TheClass.mappings[i];
-                var valueFromForm;
-                if (this.transaction.state.cardDetails) {
-                    valueFromForm = this.transaction.state.cardDetails[i];
-                } else {
-                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
-                }
-                
-                if (valueFromForm) {
-                    switch (mapping) {
-                        case 'exp_date':
-                            var parts = valueFromForm.split("/");
-                            var month = parts[0];
-                            var year = parts[1];
-                            tokenInfo['expMonth'] = month;
-                            tokenInfo['expYear'] = year;
-                            break;
-                        case 'name':
-                            var parts = (valueFromForm||"").split(" ");
-                            var firstName;
-                            var lastName;
-                            if (parts.length<2) {
-                                // I guess assume they only provided a first name?
-                                firstName = parts[0];
-                                lastName = "";
-                            } else {
-                                // we'll consider the final word to be the surname; everything else is first name.
-                                firstName = parts.slice(0, -1).join(' ');
-                                lastName = parts.slice(-1).join(' ');
-                            }
-                            tokenInfo['first_name'] = firstName;
-                            tokenInfo['last_name'] = lastName;
-                            break;
-                        case 'first_name':
-                            // if this was already populated by cardholder name split, concede authority
-                            if (tokenInfo['first_name']) break;
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                            break;
-                        case 'last_name':
-                            // if this was already populated by cardholder name split, concede authority
-                            if (tokenInfo['last_name']) break;
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                            break;
-                        default:
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                    }
-                }
-            }*/
-
-            /*var resolvedValues = (function(mappings) {
-                var map = {};
-
-                for (var i in mappings) {
-                    var mapping = mappings[i];
-                    var valueFromForm;
-                    valueFromForm = this.transaction.state.cardDetails
-                    ? this.transaction.state.cardDetails[i]
-                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
-
-                    map[i] = valueFromForm;
-                }
-
-                return map;
-            })
-            .call(this, TheClass.mappings);
-
-            var setKeyToVal = function(key, value) {
-                tokenInfo[TheClass.mappings[key]] = value;
-            };
-            
-            for (var i in TheClass.mappings) {
-                var mapping = TheClass.mappings[i];
-                var valueFromForm = resolvedValues[i];
-
-                var doDefault = function() {
-                    setKeyToVal(i, valueFromForm);
-                };
-                
-                if (valueFromForm) {
-                    switch (i) {
-                        case 'exp-date':
-                            var parts = valueFromForm.split("/");
-                            var month = parts[0];
-                            var year = parts[1];
-                            setKeyToVal('exp-month', month);
-                            setKeyToVal('exp-year', year);
-                            break;
-                        case 'exp-month':
-                        case 'exp-year':
-                            // concede fealty
-                            if (resolvedValues['exp-date']) break;
-                            doDefault(); break;
-                        case 'cardholder-name':
-                            // gotta split this
-                            var parts = (valueFromForm||"").split(" ");
-                            var firstName;
-                            var lastName;
-                            if (parts.length<2) {
-                                // I guess assume they only provided a first name?
-                                firstName = parts[0];
-                                lastName = "";
-                            } else {
-                                // we'll consider the final word to be the surname; everything else is first name.
-                                firstName = parts.slice(0, -1).join(' ');
-                                lastName = parts.slice(-1).join(' ');
-                            }
-                            setKeyToVal('name-first', firstName);
-                            setKeyToVal('name-last', lastName);
-                            break;
-                        case 'name-last':
-                        case 'name-first':
-                            // concede fealty
-                            if (resolvedValues['cardholder-name']) break;
-                            doDefault(); break;
-                        default:
-                            doDefault();
-                    }
-                }
-            }
-
-            var self = this;
-
-            tokenInfo['environment_key'] = spreedlyEnvKey;
-
-            // Serialize and URI encode parameters.
-            var paramStr = $.param(tokenInfo);
-
-            var url = "https://core.spreedly.com/v1/payment_methods.js?"+ paramStr;
-            var ajaxObj = {
-              type: "GET",
-              url: url,
-              dataType: "jsonp",
-              async: true
-            };
-
-            $.ajax(ajaxObj)
-            .done(function() {
-                self.gatewayResponseHandler.apply(self, arguments);
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                var bfjsError = {
-                    detailObj: jqXHR,
-                    message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
-                    code: 3100
-                };
-
-                // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-                self.ultimateFailure(bfjsError);
-            });*/
         };
 
         p.gatewayResponseHandler = function(data) {
-            if (data.status === 201) {
-                var parseFailure = false;
-                try {
-                    var token = data.transaction.payment_method.token;
-                } catch(e) {
-                    parseFailure = true;
-                }
-                if (parseFailure || !token) {
+            var successHandler = function(data) {
+                if (!data.cardToken) {
                     var bfjsError = {
                         code: 3200,
-                        message: "Card capture to Spreedly failed; token not in promised location within response.",
+                        message: "Card capture to SagePay failed; malformed response.",
                         detailObj: data
                     };
                     return this.ultimateFailure(bfjsError);
@@ -1885,7 +1672,10 @@
                 var payload = {
                     "@type": 'SagePayAuthCaptureRequest',
                     "gateway": "SagePay",
-                    "cardToken": token,
+                    "cardType": data.cardType,
+                    "expiryDate": data.expiryDate,
+                    "last4Digits": data.last4Digits,
+                    "cardToken": data.cardToken,
                     "accountID": this.transaction.accountID
                 };
 
@@ -1901,10 +1691,10 @@
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                     }
                     switch(i) {
-                            case 'use-as-default-payment-method':
-                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
-                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
-                            break;
+                        case 'use-as-default-payment-method':
+                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                        break;
                     }
                     
                     if (valueFromForm) {
@@ -1915,14 +1705,24 @@
                 $.extend(payload, additional);
 
                 return this.doAuthCapture(payload);
-            } else {
-                var bfjsError = {
-                    code: 3000,
-                    message: "Card capture to SagePay failed.",
-                    detailObj: data
-                };
-                // Show the errors on the form
-                return this.ultimateFailure(bfjsError);
+            };
+
+            var failHandler = function(data) {
+
+            };
+
+            switch(data.status) {
+                case 'OK':
+                    return successHandler(data);
+                case 'INVALID':
+                    return failHandler(data);
+                default:
+                    var bfjsError = {
+                        code: 3200,
+                        message: "Card capture to SagePay failed; malformed response in IFrame.",
+                        detailObj: data
+                    };
+                    return this.ultimateFailure(bfjsError);
             }
         };
 
