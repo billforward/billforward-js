@@ -1634,6 +1634,8 @@
 
             var self = this;
 
+            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+
             var handleIFrameResponse = function(e) {
                 var originalEvent = e.originalEvent;
                 console.log(originalEvent);
@@ -1643,13 +1645,14 @@
                     console.log("awww yiss")
                     console.log(originalEvent.data);
                     self.gatewayResponseHandler.call(self, originalEvent.data);
+                    var $registrationRequester = $("#"+registrationRequesterID);
+                    $registrationRequester.hide();
                 }
               };
             $(window).unbind('message', handleIFrameResponse);
             $(window).bind('message', handleIFrameResponse);
 
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
-            var registrationRequesterID = "bf-sagePayRegistrationRequester";
 
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
