@@ -1693,7 +1693,7 @@
             }
 
             var successHandler = function(data) {
-                if (!data.cardToken) {
+                if (!data.token) {
                     return malformedResponse(data);
                 }
 
@@ -1703,7 +1703,7 @@
                     "cardType": data.cardType,
                     "expiryDate": data.expiryDate,
                     "last4Digits": data.last4Digits,
-                    "cardToken": data.cardToken,
+                    "cardToken": data.token,
                     "accountID": self.transaction.accountID
                 };
 
