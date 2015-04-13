@@ -436,10 +436,21 @@
             Client-side tokenization of card with gateway:
                 30xx - Tokenization failed
               * 3000 --- (Generic)
-                31xx --- Failed to connect to gateway
-              * 3100 ----- (Generic)
-                32xx --- Received malformed response
-              * 3200 ----- (Generic)
+                31xx - Failed to connect to gateway
+              * 3100 --- (Generic)
+                32xx - Received malformed response
+              * 3200 --- (Generic)
+
+            Server-side scrutinization of token from gateway:
+                50xx - Verification failed
+                5000 --- (Generic)
+                501x --- Server rejected card notification
+              * 5010 ----- (Generic)
+                502x --- Error occurred during verification
+              * 5020 ----- (Generic)
+                51xx - Malformed response from server
+              * 5100 --- (Generic)
+              * 5101 --- JSON parse error
 
             Authorized card capture:
                 4xxx - Card capture failed
@@ -1586,24 +1597,6 @@
                 });
             }
 
-            /*var sagePayRegistrationURL;
-            switch(payload.environment) {
-                case 'Sandbox':
-                sagePayRegistrationURL = "https://test.sagepay.com/gateway/service/token.vsp";
-                break;
-                case 'Production':
-                sagePayRegistrationURL = "https://live.sagepay.com/gateway/service/token.vsp";
-                break;
-                default:
-                return this.ultimateFailure({
-                    code: 2030,
-                    message: "Preauthorization failed. An unsupported operation was proposed.",
-                    detailObj: data
-                });
-            }
-            
-            var tokenInfo = {};*/
-
             // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
             // var auth = this.transaction.bfjs.state.api.token;
 
@@ -1633,16 +1626,23 @@
                 windowProxy.addEventListener(onMessage);
             };*/
 
+            console.log(this.transaction.bfjs.state.api.url);
+
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
+            console.log(bfAPIURLParsed);
 
             var self = this;
 
             var handleIFrameResponse = function(e) {
                 var originalEvent = e.originalEvent;
                 console.log(originalEvent);
+                console.log(bfAPIURLParsed);
+                console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
-                    console.log("awww yiss", originalEvent.data);
-                    self.gatewayResponseHandler.apply(self, originalEvent.data);
+                    console.log("awww yiss")
+                    console.log(originalEvent.data);
+                    self.gatewayResponseHandler.call(self, originalEvent.data);
                 }
               };
             $(window).unbind('message', handleIFrameResponse);
@@ -1659,14 +1659,32 @@
         };
 
         p.gatewayResponseHandler = function(data) {
+            var self = this;
+
+            var malformedResponse = function(data) {
+                var bfjsError = {
+                    code: 5100,
+                    message: "Card capture to SagePay failed; malformed response.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var parsed;
+            try {
+                parsed = JSON.parse(data);
+            } catch(err) {
+                var bfjsError = {
+                    code: 5101,
+                    message: "Card capture to SagePay failed; malformed response (expected JSON-encoded).",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            }
+
             var successHandler = function(data) {
                 if (!data.cardToken) {
-                    var bfjsError = {
-                        code: 3200,
-                        message: "Card capture to SagePay failed; malformed response.",
-                        detailObj: data
-                    };
-                    return this.ultimateFailure(bfjsError);
+                    return malformedResponse(data);
                 }
 
                 var payload = {
@@ -1676,7 +1694,7 @@
                     "expiryDate": data.expiryDate,
                     "last4Digits": data.last4Digits,
                     "cardToken": data.cardToken,
-                    "accountID": this.transaction.accountID
+                    "accountID": self.transaction.accountID
                 };
 
                 // add BF-only attributes here
@@ -1685,10 +1703,10 @@
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
-                    if (this.transaction.state.cardDetails) {
-                        valueFromForm = this.transaction.state.cardDetails[i];
+                    if (self.transaction.state.cardDetails) {
+                        valueFromForm = self.transaction.state.cardDetails[i];
                     } else {
-                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                        valueFromForm = self.transaction.bfjs.core.getFormValue(i, self.transaction.state.$formElement);
                     }
                     switch(i) {
                         case 'use-as-default-payment-method':
@@ -1704,25 +1722,37 @@
 
                 $.extend(payload, additional);
 
-                return this.doAuthCapture(payload);
+                return self.doAuthCapture(payload);
             };
 
-            var failHandler = function(data) {
-
+            var invalidHandler = function(data) {
+                var reason = data.statusDetail;
+                var bfjsError = {
+                    code: 5010,
+                    message: "Card capture to SagePay failed; card rejected. Reason: '"+reason+"'",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
             };
 
-            switch(data.status) {
+            var errorHandler = function(data) {
+                var bfjsError = {
+                    code: 5020,
+                    message: "Card capture to SagePay failed; error occurred in BillForward server during token verification.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            switch(parsed.status) {
                 case 'OK':
-                    return successHandler(data);
+                    return successHandler(parsed);
                 case 'INVALID':
-                    return failHandler(data);
+                    return invalidHandler(parsed);
+                case 'ERROR':
+                    return errorHandler(parsed);
                 default:
-                    var bfjsError = {
-                        code: 3200,
-                        message: "Card capture to SagePay failed; malformed response in IFrame.",
-                        detailObj: data
-                    };
-                    return this.ultimateFailure(bfjsError);
+                    return malformedResponse(parsed);
             }
         };
 
@@ -1852,6 +1882,7 @@
 
     bfjs.core.parseURL = function(href) {
         var urlParser = document.createElement("a");
+        urlParser.href = href;
         return {
             host: urlParser.host,
             hostname: urlParser.hostname,
