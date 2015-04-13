@@ -188,6 +188,7 @@
             // statics
             this.key = 'sagepay';
             this.sagePayFormContainerSelector = null;
+            this.sagePayFormContainerOptions = {};
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1654,11 +1655,17 @@
 
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
 
+            var viewOptions = $.extend({
+                width: "398px",
+                height: "464px",
+                border: "none"
+            }, this.myGateway.sagePayFormContainerOptions);
+
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
-            $registrationRequester.css("border", "none");
-            $registrationRequester.width("398px");
-            $registrationRequester.height("464px");
+            $registrationRequester.css("border", viewOptions.border);
+            $registrationRequester.width(viewOptions.width);
+            $registrationRequester.height(viewOptions.height);
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -1942,9 +1949,10 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
-    bfjs.addSagePayForm = function(selector) {
+    bfjs.addSagePayForm = function(selector, options) {
         // supported for SagePay only
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
+        bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
