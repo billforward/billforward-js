@@ -1633,7 +1633,7 @@
                 windowProxy.addEventListener(onMessage);
             };*/
 
-            var bfAPIURLParsed = this.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var self = this;
 
