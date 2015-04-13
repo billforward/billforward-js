@@ -1632,13 +1632,15 @@
                 windowProxy.addEventListener(onMessage);
             };*/
 
+            var bfAPIURLParsed = this.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
             var self = this;
 
             var handleSagePayResponse = function(e) {
                 var originalEvent = e.originalEvent;
                 console.log(originalEvent);
-                if (originalEvent.origin === self.transaction.bfjs.state.api.url) {
-                  console.log(originalEvent.data);
+                if (originalEvent.origin === bfAPIURLParsed.origin) {
+                    console.log("awww yiss", originalEvent.data);
                 }
               };
             $(window).unbind('message', handleSagePayResponse);
@@ -1652,6 +1654,7 @@
             $registrationRequester.css("border", "none");
             $registrationRequester.width("398px");
             $registrationRequester.height("464px");
+
 
             //however, error page is: 944 464
 
@@ -2045,6 +2048,18 @@
         if (value) {
             $input.attr(newAttr, newKey);
         }
+    };
+
+    bfjs.core.parseURL = function(href) {
+        var urlParser = document.createElement("a");
+        return {
+            host: urlParser.host,
+            hostname: urlParser.hostname,
+            href: urlParser.href,
+            pathname: urlParser.pathname,
+            protocol: urlParser.protocol,
+            origin: urlParser.origin
+        };
     };
 
     var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
