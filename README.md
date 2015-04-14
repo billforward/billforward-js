@@ -441,6 +441,7 @@ BillForward.addSagePayForm('#sagePayFormContainer');
 var cardDetails = {
 };
 
+// Downloads hosted form into your specified container, and binds its submission to a callback of your choice.
 BillForward.captureCard(cardDetails, 'sagepay', accountID, callback);
 ```
 
