@@ -1517,6 +1517,12 @@
 
         // these, if present, will be thrown straight into BF authCapture request.
         TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
         };
 
         var p = TheClass.prototype = new _parent();
