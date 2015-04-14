@@ -23,6 +23,7 @@ Currently supported:
 `stripe`
 `braintree`
 `braintree+paypal`
+`sagepay`
 
 ###Include
 ####Easy mode
