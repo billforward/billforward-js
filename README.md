@@ -20,10 +20,10 @@ The code you write is the same, regardless of payment gateway. This makes it tri
 ###Supported gateways
 Currently supported:
 
-`stripe`
-`braintree`
-`braintree+paypal`
-`sagepay`
+- `stripe`
+- `braintree`
+- `braintree+paypal`
+- `sagepay`
 
 ###Include
 ####Easy mode
@@ -318,23 +318,41 @@ Preauthorization:
     202x --- Precondition failed
   * 2020 ----- (Generic)
   * 2021 ----- Specified gateway not configured
+    203x --- BillForward server proposed an unsupported operation
+  * 2030 ----- (Generic)
+    21xx --- Failure between BillForward server and gateway
+  * 2100 ----- (Generic)
 
 Client-side tokenization of card with gateway:
     30xx - Tokenization failed
   * 3000 --- (Generic)
-    31xx --- Failed to connect to gateway
-  * 3100 ----- (Generic)
-    32xx --- Received malformed response
-  * 3200 ----- (Generic)
+    31xx - Failed to connect to gateway
+  * 3100 --- (Generic)
+    32xx - Received malformed response
+  * 3200 --- (Generic)
+
+Server-side scrutinization of token from gateway:
+    50xx - Verification failed
+    5000 --- (Generic)
+    501x --- Server rejected card notification
+  * 5010 ----- (Generic)
+    502x --- Error occurred during verification
+  * 5020 ----- (Generic)
+    51xx - Malformed response from server
+  * 5100 --- (Generic)
+  * 5101 --- JSON parse error
 
 Authorized card capture:
     4xxx - Card capture failed
   * 4000 --- (Generic)
   * 4001 --- Unhandled BillForward server error
+  * 4002 --- Handled BillForward server error
     41xx --- Card declined
   * 4100 ----- (Generic)
     42xx --- Input validation failure
-  * 4200 ----- (Generic)
+    4200 ----- (Generic)
+    43xx --- Failure between BillForward server and gateway
+  * 4300 ----- (Generic)
 ```
 
 
@@ -383,6 +401,63 @@ BillForward.captureCard(cardDetails, 'stripe', accountID, callback);
 ```
 
 Each entry in the cardDetails object is equivalent to passing in a `bf-data` attribute of the same name.
+
+###Gateway-specific invocation
+####PayPal (via Braintree)
+You can add a (hosted) PayPal button to a custom Braintree form. It will be downloaded and dropped into an HTML node of your choice:
+
+```html
+<div id="paypalButtonContainer"></div>
+```
+
+Use `addPayPalButton()` to recruit this PayPal button in your form.
+
+```js
+// Jquery-style selector pointing to your form
+var formSelector = '#payment-form';
+
+// Jquery-style selector pointing to your PayPal button container
+BillForward.addPayPalButton('#paypalButtonContainer');
+
+// bind to 'submit' event the 'card capture' routine
+BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, callback);
+```
+
+Note that only the custom form invocation (`captureCardOnSubmit()`) supports this.
+
+####SagePay
+SagePay is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
+
+```html
+<div id="sagePayFormContainer"></div>
+```
+
+Use `addSagePayForm()` to indicate your intent to use this form.
+
+```js
+// Jquery-style selector pointing to your SagePay hosted form container
+BillForward.addSagePayForm('#sagePayFormContainer');
+
+var cardDetails = {
+};
+
+BillForward.captureCard(cardDetails, 'sagepay', accountID, callback);
+```
+
+You could also use the same `cardDetails` object to pass metadata into the payment method. The following metadata is honoured for SagePay hosted form invocation:
+
+```js
+var cardDetails = {
+	'email': 'billiam@forward.net',
+    'company-name': 'BillForward',
+    'name-first': 'Bill',
+    'name-last': 'Forward',
+    'phone-mobile': '01189998819',
+	'use-as-default-payment-method': true
+};
+```
+
+The BillForward UI gives you the opportunity to specify which types of card you wish to accept through SagePay (using a multi-select).
 
 ###Example checkout
 See the 'examples' folder for examples of full worked checkouts.
