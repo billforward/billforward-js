@@ -1019,8 +1019,8 @@
             }
             this.resolvedEnvironment = resolvedEnvironment;
             
-            console.log("env", environment);
-            console.log("resEnv", resolvedEnvironment);
+            // console.log("env", environment);
+            // console.log("resEnv", resolvedEnvironment);
 
             if (failed) {
                 return this.ultimateFailure({
@@ -1078,7 +1078,7 @@
                 var $formElement = this.transaction.state.$formElement;
                 var deviceDataSelector = $formElement.find("input[name='device_data']");
                 deviceDataValue = deviceDataSelector.val();
-                console.log("dev_d", deviceDataValue);
+                // console.log("dev_d", deviceDataValue);
             }
 
             var nonceValue;
@@ -1634,11 +1634,11 @@
                 windowProxy.addEventListener(onMessage);
             };*/
 
-            console.log(this.transaction.bfjs.state.api.url);
+            // console.log(this.transaction.bfjs.state.api.url);
 
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
-            console.log(bfAPIURLParsed);
+            // console.log(bfAPIURLParsed);
 
             var self = this;
 
@@ -1646,9 +1646,9 @@
 
             var handleIFrameResponse = function(e) {
                 var originalEvent = e.originalEvent;
-                console.log(originalEvent);
-                console.log(bfAPIURLParsed);
-                console.log(originalEvent.origin, bfAPIURLParsed.origin);
+                // console.log(originalEvent);
+                // console.log(bfAPIURLParsed);
+                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
                     self.gatewayResponseHandler.call(self, originalEvent.data);
                     var $registrationRequester = $("#"+registrationRequesterID);
