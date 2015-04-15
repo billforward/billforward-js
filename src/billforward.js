@@ -190,6 +190,7 @@
             this.sagePayFormContainerSelector = null;
             this.sagePayFormContainerOptions = {};
             this.getDeferredCardDetails = function() { return {} };
+            this.handleIFrameLoaded = function() { return {} };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1644,7 +1645,7 @@
 
             var registrationRequesterID = "bf-sagePayRegistrationRequester";
 
-            var handleIFrameResponse = function(e) {
+            function handleIFrameResponse(e) {
                 var originalEvent = e.originalEvent;
                 // console.log(originalEvent);
                 // console.log(bfAPIURLParsed);
@@ -1671,6 +1672,11 @@
             $registrationRequester.css("border", viewOptions.border);
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
+
+            function handleIFrameLoaded(e) {
+                self.myGateway.handleIFrameLoaded();
+            }
+            $registrationRequester.ready(handleIFrameLoaded);
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -1716,8 +1722,11 @@
                 var additional = {};
 
                 // extend cardDetails with late card details, if applicable
-                var lateCardDetails = this.myGateway.getDeferredCardDetails();
-                var extendedDetails = self.transaction.state.cardDetails.extend(lateCardDetails);
+                var lateCardDetails = {};
+                if (self.myGateway.getDeferredCardDetails) {
+                    $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
+                }
+                var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
             
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
@@ -1954,11 +1963,12 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
-    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails) {
+    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameLoaded) {
         // supported for SagePay only
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
         bfjs.gatewayInstances['sagepay'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
+        bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { return {} };
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
