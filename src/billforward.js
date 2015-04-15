@@ -191,6 +191,7 @@
             this.sagePayFormContainerOptions = {};
             this.getDeferredCardDetails = function() { return {} };
             this.handleIFrameReady = function() { return {} };
+            this.handleIFrameLoaded = function() { return {} };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1651,13 +1652,13 @@
                 // console.log(bfAPIURLParsed);
                 // console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
-                    self.gatewayResponseHandler.call(self, originalEvent.data);
                     var $registrationRequester = $("#"+registrationRequesterID);
-                    $registrationRequester.hide();
+                    $registrationRequester.remove();
+                    self.gatewayResponseHandler.call(self, originalEvent.data);
                 }
               };
-            $(window).unbind('message', handleIFrameResponse);
-            $(window).bind('message', handleIFrameResponse);
+            $(window).off('message', handleIFrameResponse);
+            $(window).on('message', handleIFrameResponse);
 
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
 
@@ -1669,14 +1670,23 @@
 
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
+            $registrationRequester.hide();
             $registrationRequester.css("border", viewOptions.border);
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
 
             function handleIFrameReady(e) {
+                $registrationRequester.off('ready', handleIFrameReady);
                 self.myGateway.handleIFrameReady();
             }
+            function handleIFrameLoaded(e) {
+                $registrationRequester.off('load', handleIFrameLoaded);
+                self.myGateway.handleIFrameLoaded();
+                $registrationRequester.show();
+            }
             $registrationRequester.ready(handleIFrameReady);
+            $registrationRequester.off('load', handleIFrameLoaded);
+            $registrationRequester.on('load', handleIFrameLoaded);
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -1963,12 +1973,13 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
-    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameReady) {
+    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameReady, handleIFrameLoaded) {
         // supported for SagePay only
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
         bfjs.gatewayInstances['sagepay'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
         bfjs.gatewayInstances['sagepay'].handleIFrameReady = handleIFrameReady || function() { return {} };
+        bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { return {} };
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
