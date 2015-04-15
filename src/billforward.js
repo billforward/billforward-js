@@ -190,7 +190,7 @@
             this.sagePayFormContainerSelector = null;
             this.sagePayFormContainerOptions = {};
             this.getDeferredCardDetails = function() { return {} };
-            this.handleIFrameLoaded = function() { return {} };
+            this.handleIFrameReady = function() { return {} };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1673,10 +1673,10 @@
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
 
-            function handleIFrameLoaded(e) {
-                self.myGateway.handleIFrameLoaded();
+            function handleIFrameReady(e) {
+                self.myGateway.handleIFrameReady();
             }
-            $registrationRequester.ready(handleIFrameLoaded);
+            $registrationRequester.ready(handleIFrameReady);
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -1963,12 +1963,12 @@
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
     };
 
-    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameLoaded) {
+    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameReady) {
         // supported for SagePay only
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
         bfjs.gatewayInstances['sagepay'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
-        bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { return {} };
+        bfjs.gatewayInstances['sagepay'].handleIFrameReady = handleIFrameReady || function() { return {} };
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
