@@ -1920,7 +1920,6 @@
             };
         } else {  //Others
             script.onload = function(){
-                console.log(script);
                 doCallback();
             };
         }
