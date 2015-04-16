@@ -1118,7 +1118,7 @@
                     var valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                     
                     if (valueFromForm) {
-                        tokenInfo[TheClass.mappings[i]] = valueFromForm;
+                        tokenInfo[TheClass.mappingsProgrammatic[i]] = valueFromForm;
                     }
                 }
             }
