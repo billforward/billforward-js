@@ -1833,27 +1833,30 @@
             var actor = bfjs.lateActors[i];
             
             var loadedCallback = actor.loadedCallback;
+
+            var braintreeActor;
             
             switch (actor.depName) {
-                    case 'braintree':
-                        if(typeof window.BraintreeData === 'undefined') {
-                            // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
-                            loadedCallback = function() {
-                                var url = "https://js.braintreegateway.com/v1/braintree-data.js";
-                                
-                                bfjs.loadScript(url, actor.loadedCallback, actor);
-                            };
-                        }
-                    default:
-                        if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
-                            loadedCallback.call(actor);
-                        } else {
-                            queue.push({
-                                actor: actor,
-                                src: actor.depUrl,
-                                callback: loadedCallback
-                            });
-                        }
+                case 'braintree':
+                    braintreeActor = actor;
+                    if(typeof window.BraintreeData === 'undefined') {
+                        // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
+                        loadedCallback = function() {
+                            var url = "https://js.braintreegateway.com/v1/braintree-data.js";
+                            
+                            bfjs.loadScript(url, braintreeActor.loadedCallback, braintreeActor);
+                        };
+                    }
+                default:
+                    if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
+                        loadedCallback.call(actor);
+                    } else {
+                        queue.push({
+                            actor: actor,
+                            src: actor.depUrl,
+                            callback: loadedCallback
+                        });
+                    }
             }            
         }
 
