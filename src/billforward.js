@@ -1946,7 +1946,7 @@
         var $input = bfjs.core.getFormInput(key, $formElement);
         var value = bfjs.core.valueFromFormInput($input);
 
-        if (value) {
+        if (typeof value !== 'undefined') {
             $input.attr(newAttr, newKey);
         }
     };
