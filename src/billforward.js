@@ -131,7 +131,7 @@
         var TheClass = function() {
             // statics
             this.key = 'braintree';
-            this.depUrl = "https://assets.braintreegateway.com/v2/braintree.js";
+            this.depUrl = "https://js.braintreegateway.com/v2/braintree.js";
             this.depName = "braintree";
             this.usePaypal = false;
             this.paypalButtonSelector = null;
