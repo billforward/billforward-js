@@ -135,6 +135,7 @@
             this.depName = "braintree";
             this.usePaypal = false;
             this.paypalButtonSelector = null;
+            this.depObj = null;
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1032,6 +1033,10 @@
                 });
             }
 
+            if (typeof braintree !== 'undefined') {
+                this.myGateway.depObj = braintree;
+            }
+
             if (this.transaction.state.cardDetails) {
                 // programmatic tokenization requires no setup.
                 // doesn't support PayPal button though
@@ -1063,10 +1068,10 @@
                         paypalDivId = uniqueId;
                     }
 
-                    braintree.setup(clientToken, "paypal", {container: paypalDivId});
+                    this.myGateway.depObj.setup(clientToken, "paypal", {container: paypalDivId});
                     BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
-                //braintree.setup(clientToken, "custom", {id: formId});
+                //this.myGateway.depObj.setup(clientToken, "custom", {id: formId});
             }
 
             this.submitDancer.loadedCallback();
@@ -1137,7 +1142,7 @@
 
             //console.log(tokenInfo);
 
-            var client = new braintree.api.Client({clientToken: this.clientToken});
+            var client = new this.myGateway.depObj.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function() {
                 var argumentsArr = [];
                 for (var a = 0; a<arguments.length; a++) {
@@ -1838,14 +1843,42 @@
             
             switch (actor.depName) {
                 case 'braintree':
-                    braintreeActor = actor;
                     if(typeof window.BraintreeData === 'undefined') {
+                        braintreeActor = actor;
+                        originalLoadedCallback = braintreeActor.loadedCallback;
                         // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
-                        loadedCallback = function() {
+                        braintreeActor.loadedCallback = function() {
+                            // we allow Braintree to call its own loaded callback only once BraintreeData is in.
                             var url = "https://js.braintreegateway.com/v1/braintree-data.js";
                             
-                            bfjs.loadScript(url, braintreeActor.loadedCallback, braintreeActor);
+                            // tag load BraintreeData
+                            bfjs.loadScript(url, originalLoadedCallback, braintreeActor);
                         };
+
+                        loadedCallback = braintreeActor.loadedCallback;
+
+                        // catch RequireJS-loaded Braintree
+                        if ("function" == typeof define && define.amd) {
+                            if ("function" == typeof require) {
+                                require.config({
+                                    paths: {
+                                        "braintree": braintreeActor.depUrl.slice(0, -3)
+                                    }
+                                });
+                                require(["braintree"], function(braintreeRequire) {
+                                    // console.log(braintreeRequire);
+                                    // console.log(braintreeActor);
+                                    braintreeActor.depObj = braintreeRequire;
+                                    braintreeActor.loadedCallback.call(braintreeActor);
+                                });
+                                // don't consult window for braintree, and don't tag load it
+                                continue;
+                            } else {
+                                // define but no require?
+                                // we're gonna have trouble I know it :(
+                                throw new Error("No implementation of require() found to await module-loaded dependency: braintree.js");
+                            }
+                        }
                     }
                 default:
                     if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
@@ -1871,6 +1904,7 @@
 
         var script = document.createElement("script")
         script.type = "text/javascript";
+        // script.async = true;
 
         var doCallback = function() {
             callback.call(actor);
@@ -1886,6 +1920,7 @@
             };
         } else {  //Others
             script.onload = function(){
+                console.log(script);
                 doCallback();
             };
         }
