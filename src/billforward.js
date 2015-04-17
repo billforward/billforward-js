@@ -104,7 +104,13 @@
             // statics
             this.key = 'stripe';
             this.depUrl = "https://js.stripe.com/v2/";
+            this.depUrlRequire = "https://js.stripe.com/v2/?1";
             this.depName = "Stripe";
+            this.depObj = null;
+            this.requireShim = {};
+            // this.requireShim[this.depName] = {
+            //   "exports": "Stripe"
+            // };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -132,10 +138,16 @@
             // statics
             this.key = 'braintree';
             this.depUrl = "https://js.braintreegateway.com/v2/braintree.js";
+            this.depUrlRequire = "https://js.braintreegateway.com/v2/braintree";
             this.depName = "braintree";
             this.usePaypal = false;
             this.paypalButtonSelector = null;
             this.depObj = null;
+            this.requireShim = {};
+            this.handlePayPalFetchBegin = function() { return; };
+            this.handlePayPalReady = function() { return; };
+            this.handlePayPalLoaded = function() { return; };
+            this.onPaymentMethodReceived = function() { return; };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -304,6 +316,31 @@
                         e.preventDefault();
                         e.stopPropagation();
 
+                        /*var $self = $(this);
+
+                        var disableForm = function() {
+                            var $set = $self.find('input, textarea, button, select');
+                            $set.map(function(index, element) {
+
+                            });
+                            $set.each(function(index, element) {
+                                $(element).prop('bf-prior-disable', $(element).prop('disabled'));
+                            });
+                            //$set.each(function(index, element) {console.log($(element).attr('disabled'))})
+                            $set.prop('disabled',function(setIndex, currentVal) {
+
+                                $set.get(setIndex).prop('bf-prior-disable', currentVal);
+                                return true;
+                            });
+                        };
+
+                        var undisableForm = function() {
+                            var $set = $self.find('input, textarea, button, select');
+                            $set.prop('disabled',function(setIndex, currentVal) {
+                                return $set.get(setIndex).prop('bf-prior-disable');
+                            });
+                        };*/
+
                         newGatewayTransaction.doSubmitDanceWhenReady();
                     });
 
@@ -456,9 +493,6 @@
                 51xx - Malformed response from server
               * 5100 --- (Generic)
               * 5101 --- JSON parse error
-                52xx - Token registration aborted
-                5200 --- (Generic)
-              * 5201 --- Aborted by customer
 
             Authorized card capture:
                 4xxx - Card capture failed
@@ -471,6 +505,9 @@
                 4200 ----- (Generic)
                 43xx --- Failure between BillForward server and gateway
               * 4300 ----- (Generic)
+                52xx - Token registration aborted
+                5200 --- (Generic)
+              * 5201 --- Aborted by customer
             */
 
             var error = {
@@ -633,6 +670,11 @@
 
         p.ultimateFailure = function(reason) {
             //console.error(reason);
+            /*if ('undefined' !== typeof this.undisableForm) {
+                this.undisableForm();
+                this.undisableForm = null;
+                this.submitDanceBegun = false;
+            }*/
             this.transaction.callback(null, reason);
         };
 
@@ -646,6 +688,7 @@
             _parent.apply(this, arguments);
             this.pageLoadDancer = this.makeDancer();
             this.submitDancer = this.makeDancer();
+            // this.submitDanceBegun = false;
         };
 
         var p = TheClass.prototype = new _parent();
@@ -685,12 +728,18 @@
         p.doSubmitDanceWhenReady = function() {
             var self = this;
 
-            var deferredTransaction = bfjs.TransactionBase.construct();
-            deferredTransaction.do = function() {
-                self.startAuthCapture(self.preAuthResponsePayload);
-            };
+            // if (!this.submitDanceBegun) {
+                var deferredTransaction = bfjs.TransactionBase.construct();
+                deferredTransaction.do = function() {
+                    /*if (disableForm) {
+                        disableForm();
+                    }
+                    this.undisableForm = undisableForm;*/
+                    self.startAuthCapture(self.preAuthResponsePayload);
+                };
 
-            this.submitDancer.doWhenReady(deferredTransaction);
+                this.submitDancer.doWhenReady(deferredTransaction);   
+            // }
         };
 
         return TheClass;
@@ -783,6 +832,10 @@
                 });
             }
             // This identifies your website in the createToken call below
+
+            /*if (typeof Stripe !== 'undefined') {
+                this.myGateway.depObj = Stripe;
+            }*/
 
             var stripePublishableKey = data.results[0].publicKey;
             Stripe.setPublishableKey(stripePublishableKey);
@@ -1063,6 +1116,9 @@
                 if (this.myGateway.usePaypal) {
                     var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                     var paypalDivId = $paypalSelector.attr('id');
+                    // console.log(this.myGateway.paypalButtonSelector);
+                    // console.log($paypalSelector);
+                    // console.log(paypalDivId);
 
                     if (!paypalDivId) {
                         // attribute does not exist
@@ -1071,7 +1127,41 @@
                         paypalDivId = uniqueId;
                     }
 
-                    this.myGateway.depObj.setup(clientToken, "paypal", {container: paypalDivId});
+                    var self = this;
+
+                    self.myGateway.handlePayPalFetchBegin();
+
+                    var onPaymentMethodReceived = function(obj) {
+                        self.myGateway.onPaymentMethodReceived();
+                    };
+
+                    this.myGateway.depObj.setup(clientToken, "paypal", {
+                        container: paypalDivId,
+                        singleUse: false,
+                        onPaymentMethodReceived: onPaymentMethodReceived
+                        /*function(obj) {
+                            var $formElement = self.transaction.state.$formElement;
+
+                            var $self = $formElement;
+
+                            var disableForm = function() {
+                                var $set = $self.find('input, textarea, button, select');
+                                $set.prop('disabled',function(setIndex, currentVal) {
+                                    $set.get(setIndex).prop('bf-prior-disable', currentVal);
+                                    return true;
+                                });
+                            };
+
+                            var undisableForm = function() {
+                                var $set = $self.find('input, textarea, button, select');
+                                $set.prop('disabled',function(setIndex, currentVal) {
+                                    return $set.get(setIndex).prop('bf-prior-disable');
+                                });
+                            };
+
+                            self.doSubmitDanceWhenReady(disableForm, undisableForm);
+                        }*/
+                    });
                     BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
                 //this.myGateway.depObj.setup(clientToken, "custom", {id: formId});
@@ -1683,7 +1773,7 @@
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
 
-            function handleIFrameReady(e) {
+            function handleIFrameReady() {
                 $registrationRequester.off('ready', handleIFrameReady);
                 self.myGateway.handleIFrameReady();
             }
@@ -1845,52 +1935,75 @@
     };
 
     bfjs.grabScripts = function() {
+        function attemptLoadUsingRequire(actor) {
+            // catch RequireJS-loaded dependency
+            if ("function" == typeof define && define.amd) {
+                if ("function" == typeof require) {
+                    var paths = {};
+                    paths[actor.depName] = actor.depUrlRequire;
+
+                    // console.log(actor);
+
+                    require.config({
+                        paths: paths,
+                        shim: actor.requireShim
+                    });
+                    require([actor.depName], function(dependency) {
+                        if ("function" == typeof dependency) {
+                            actor.depObj = dependency();
+                        } else {
+                            actor.depObj = dependency;
+                        }
+                        // console.log(actor.depObj);
+                        // console.log(actor);
+                        actor.depObj = dependency;
+                        actor.loadedCallback.call(actor);
+                    });
+                    // don't consult window for dependency, and don't tag load it
+                    return true;
+                } else {
+                    // define but no require?
+                    // we're gonna have trouble I know it :(
+                    throw new Error("No implementation of require() found to await module-loaded dependency: braintree.js");
+                }
+            }
+            return false;
+        }
 
         var queue = [];
+        var actor;
+
+        var braintreeActor;
+        var stripeActor;
         for (var i=0; i<bfjs.lateActors.length; i++) {
-            var actor = bfjs.lateActors[i];
+            actor = bfjs.lateActors[i];
             
             var loadedCallback = actor.loadedCallback;
-
-            var braintreeActor;
             
             switch (actor.depName) {
+                // case 'Stripe':
+                    // stripeActor = bfjs.lateActors[i];
+                    // if (attemptLoadUsingRequire(stripeActor)) {
+                    //     continue;
+                    // }
                 case 'braintree':
+                    braintreeActor = bfjs.lateActors[i];
                     if(typeof window.BraintreeData === 'undefined') {
-                        braintreeActor = actor;
-                        originalLoadedCallback = braintreeActor.loadedCallback;
+                        originalLoadedCallback = actor.loadedCallback;
                         // schedule a load of BraintreeData after Braintree is loaded, then call Braintree's loaded callback.
-                        braintreeActor.loadedCallback = function() {
+                        actor.loadedCallback = function() {
                             // we allow Braintree to call its own loaded callback only once BraintreeData is in.
                             var url = "https://js.braintreegateway.com/v1/braintree-data.js";
                             
                             // tag load BraintreeData
-                            bfjs.loadScript(url, originalLoadedCallback, braintreeActor);
+                            bfjs.loadScript(url, originalLoadedCallback, actor);
                         };
 
-                        loadedCallback = braintreeActor.loadedCallback;
+                        loadedCallback = actor.loadedCallback;
 
                         // catch RequireJS-loaded Braintree
-                        if ("function" == typeof define && define.amd) {
-                            if ("function" == typeof require) {
-                                require.config({
-                                    paths: {
-                                        "braintree": braintreeActor.depUrl.slice(0, -3)
-                                    }
-                                });
-                                require(["braintree"], function(braintreeRequire) {
-                                    // console.log(braintreeRequire);
-                                    // console.log(braintreeActor);
-                                    braintreeActor.depObj = braintreeRequire;
-                                    braintreeActor.loadedCallback.call(braintreeActor);
-                                });
-                                // don't consult window for braintree, and don't tag load it
-                                continue;
-                            } else {
-                                // define but no require?
-                                // we're gonna have trouble I know it :(
-                                throw new Error("No implementation of require() found to await module-loaded dependency: braintree.js");
-                            }
+                        if (attemptLoadUsingRequire(braintreeActor)) {
+                            continue;
                         }
                     }
                 default:
@@ -2017,10 +2130,14 @@
         bfjs.core.hasBfCredentials = true;
     };
 
-    bfjs.addPayPalButton = function(selector) {
+    bfjs.addPayPalButton = function(selector, onPaymentMethodReceived, handlePayPalFetchBegin, handlePayPalReady, handlePayPalLoaded) {
         // supported for Braintree only
         bfjs.gatewayInstances['braintree'].usePaypal = true;
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
+        bfjs.gatewayInstances['braintree'].onPaymentMethodReceived = onPaymentMethodReceived || function() { return; };
+        bfjs.gatewayInstances['braintree'].handlePayPalFetchBegin = handlePayPalFetchBegin || function() { };
+        bfjs.gatewayInstances['braintree'].handlePayPalReady = handlePayPalReady || function() { };
+        bfjs.gatewayInstances['braintree'].handlePayPalLoaded = handlePayPalLoaded || function() { };
     };
 
     bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameReady, handleIFrameLoaded) {
@@ -2028,8 +2145,8 @@
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
         bfjs.gatewayInstances['sagepay'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
-        bfjs.gatewayInstances['sagepay'].handleIFrameReady = handleIFrameReady || function() { return {} };
-        bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { return {} };
+        bfjs.gatewayInstances['sagepay'].handleIFrameReady = handleIFrameReady || function() { };
+        bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
 
     bfjs.resolveGatewayName = function(name, cardDetails) {
