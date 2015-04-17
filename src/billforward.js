@@ -1129,11 +1129,40 @@
 
                     var self = this;
 
-                    self.myGateway.handlePayPalFetchBegin();
-
                     var onPaymentMethodReceived = function(obj) {
                         self.myGateway.onPaymentMethodReceived();
                     };
+
+                    function handlePayPalLoaded(e) {
+                        e.stopPropagation();
+                        $paypalSelector.show();
+                        self.myGateway.handlePayPalLoaded();
+                    }
+
+                    function handlePayPalReady(e) {
+                        console.log(e.target);
+                        $imgSelector = $(e.target).find('img');
+                        $imgSelector.one('load', handlePayPalLoaded)
+                        .each(function() {
+                          if(this.complete) $(this).load();
+                        });
+                        e.stopPropagation();
+                        // $paypalSelector.show();
+                        self.myGateway.handlePayPalReady();
+                    }
+
+                    function handleDOMNodeInserted(event) {
+                        if (event.target.nodeName === "A") {
+                            $(document).off('DOMNodeInserted', self.myGateway.paypalButtonSelector, handleDOMNodeInserted);
+                            handlePayPalReady(event);
+                        }
+                    }
+
+                    $paypalSelector.hide();
+
+                    $(document).on('DOMNodeInserted', this.myGateway.paypalButtonSelector + " A", handleDOMNodeInserted);
+
+                    self.myGateway.handlePayPalFetchBegin();
 
                     this.myGateway.depObj.setup(clientToken, "paypal", {
                         container: paypalDivId,
@@ -1751,7 +1780,7 @@
                 }
               };
             $(window).off('message', handleIFrameResponse);
-            $(window).on('message', handleIFrameResponse);
+            $(window).one('message', handleIFrameResponse);
 
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
 
@@ -1778,9 +1807,9 @@
                 self.myGateway.handleIFrameLoaded();
                 $registrationRequester.show();
             }
-            $registrationRequester.ready(handleIFrameReady);
+            $registrationRequester.ready(handlePayPalReadyIFrameReady);
             $registrationRequester.off('load', handleIFrameLoaded);
-            $registrationRequester.on('load', handleIFrameLoaded);
+            $registrationRequester.one('load', handleIFrameLoaded);
         };
 
         p.gatewayResponseHandler = function(data) {
