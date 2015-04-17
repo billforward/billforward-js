@@ -1685,6 +1685,7 @@
                 self.myGateway.handleIFrameReady();
             }
             function handleIFrameLoaded(e) {
+                e.stopPropagation();
                 $registrationRequester.off('load', handleIFrameLoaded);
                 self.myGateway.handleIFrameLoaded();
                 $registrationRequester.show();
