@@ -341,6 +341,9 @@ Server-side scrutinization of token from gateway:
     51xx - Malformed response from server
   * 5100 --- (Generic)
   * 5101 --- JSON parse error
+    52xx - Token registration aborted
+    5200 --- (Generic)
+  * 5201 --- Aborted by customer
 
 Authorized card capture:
     4xxx - Card capture failed

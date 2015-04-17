@@ -456,6 +456,9 @@
                 51xx - Malformed response from server
               * 5100 --- (Generic)
               * 5101 --- JSON parse error
+                52xx - Token registration aborted
+                5200 --- (Generic)
+              * 5201 --- Aborted by customer
 
             Authorized card capture:
                 4xxx - Card capture failed
@@ -1722,6 +1725,15 @@
             var successHandler = function(data) {
                 if (!data.token) {
                     return malformedResponse(data);
+                }
+
+                if (data.token === "null") {
+                    var bfjsError = {
+                        code: 5201,
+                        message: "Card capture to SagePay failed; customer aborted token registration.",
+                        detailObj: data
+                    };
+                    return self.ultimateFailure(bfjsError);
                 }
 
                 var payload = {
