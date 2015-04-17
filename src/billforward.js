@@ -1237,7 +1237,6 @@
 
             var client = new this.myGateway.depObj.api.Client({clientToken: this.clientToken});
             client.tokenizeCard(tokenInfo, function(err, nonce, cardDetailsObj) {
-                console.log(arguments);
                 self.gatewayResponseHandler.call(self, err, nonce, deviceDataValue);
             });
         };
