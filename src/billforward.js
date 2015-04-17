@@ -1174,15 +1174,13 @@
             var self = this;
             
             var deviceDataValue;
-            if (!this.transaction.state.cardDetails) {
+            var nonceValue;
+            if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
+                // check for a device_data
                 var $formElement = this.transaction.state.$formElement;
                 var deviceDataSelector = $formElement.find("input[name='device_data']");
                 deviceDataValue = deviceDataSelector.val();
-                // console.log("dev_d", deviceDataValue);
-            }
 
-            var nonceValue;
-            if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
                 // check for a nonce
                 var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
@@ -1190,7 +1188,7 @@
                 nonceValue = nonceSelector.val();
                 if (nonceValue) {
                     //this.gatewayResponseHandler(null, nonceValue);
-                    self.gatewayResponseHandler.apply(self, [null, deviceDataValue, nonceValue]);
+                    self.gatewayResponseHandler.call(self, null, nonceValue, deviceDataValue);
                     return;
                 }
             }
@@ -1233,20 +1231,18 @@
                 }
             }
 
-            //console.log(tokenInfo);
+            console.log(tokenInfo);
+
+            var self = this;
 
             var client = new this.myGateway.depObj.api.Client({clientToken: this.clientToken});
-            client.tokenizeCard(tokenInfo, function() {
-                var argumentsArr = [];
-                for (var a = 0; a<arguments.length; a++) {
-                    var arg = arguments[a];
-                    argumentsArr.push(arg);
-                }
-                self.gatewayResponseHandler.apply(self, [deviceDataValue].concat(argumentsArr));
+            client.tokenizeCard(tokenInfo, function(err, nonce, cardDetailsObj) {
+                console.log(arguments);
+                self.gatewayResponseHandler.call(self, err, nonce, deviceDataValue);
             });
         };
 
-        p.gatewayResponseHandler = function(err, deviceData, nonce) {
+        p.gatewayResponseHandler = function(err, nonce, deviceData) {
             if (err) {
                 var bfjsError = {
                     code: 3000,
