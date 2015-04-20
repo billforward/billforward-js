@@ -310,40 +310,18 @@
                     self.state.formElement = formElement;
                     self.state.$formElement = $formElement;
 
-                    $formElement.submit(function(e) {
+                    function onSubmit(event) {
                         // Disable the submit button to prevent repeated clicks
                         $(this).find('button').prop('disabled', true);
 
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        /*var $self = $(this);
-
-                        var disableForm = function() {
-                            var $set = $self.find('input, textarea, button, select');
-                            $set.map(function(index, element) {
-
-                            });
-                            $set.each(function(index, element) {
-                                $(element).prop('bf-prior-disable', $(element).prop('disabled'));
-                            });
-                            //$set.each(function(index, element) {console.log($(element).attr('disabled'))})
-                            $set.prop('disabled',function(setIndex, currentVal) {
-
-                                $set.get(setIndex).prop('bf-prior-disable', currentVal);
-                                return true;
-                            });
-                        };
-
-                        var undisableForm = function() {
-                            var $set = $self.find('input, textarea, button, select');
-                            $set.prop('disabled',function(setIndex, currentVal) {
-                                return $set.get(setIndex).prop('bf-prior-disable');
-                            });
-                        };*/
+                        event.preventDefault();
+                        event.stopPropagation();
 
                         newGatewayTransaction.doSubmitDanceWhenReady();
-                    });
+                    }
+
+                    $formElement.off('submit', onSubmit);
+                    $formElement.on('submit', onSubmit);
 
                     // ready to go
                     $formElement.find('button').prop('disabled', false);
@@ -1256,7 +1234,7 @@
                 }
             }
 
-            console.log(tokenInfo);
+            // console.log(tokenInfo);
 
             var self = this;
 
