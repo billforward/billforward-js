@@ -203,6 +203,7 @@
             this.sagePayFormContainerSelector = null;
             this.sagePayFormContainerOptions = {};
             this.getDeferredCardDetails = function() { return {} };
+            this.handleIFrameFetchBegin = function() { return {} };
             this.handleIFrameReady = function() { return {} };
             this.handleIFrameLoaded = function() { return {} };
         };
@@ -1790,6 +1791,8 @@
                 border: "none"
             }, this.myGateway.sagePayFormContainerOptions);
 
+            this.myGateway.handleIFrameFetchBegin();
+
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
             // $registrationRequester.hide();
@@ -2164,11 +2167,12 @@
         bfjs.gatewayInstances['braintree'].handlePayPalLoaded = handlePayPalLoaded || function() { };
     };
 
-    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameReady, handleIFrameLoaded) {
+    bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
         // supported for SagePay only
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerSelector = selector;
         bfjs.gatewayInstances['sagepay'].sagePayFormContainerOptions = options || {};
         bfjs.gatewayInstances['sagepay'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
+        bfjs.gatewayInstances['sagepay'].handleIFrameFetchBegin = handleIFrameFetchBegin || function() { };
         bfjs.gatewayInstances['sagepay'].handleIFrameReady = handleIFrameReady || function() { };
         bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
