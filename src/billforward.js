@@ -1117,9 +1117,6 @@
                 if (this.myGateway.usePaypal) {
                     var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                     var paypalDivId = $paypalSelector.attr('id');
-                    // console.log(this.myGateway.paypalButtonSelector);
-                    // console.log($paypalSelector);
-                    // console.log(paypalDivId);
 
                     if (!paypalDivId) {
                         // attribute does not exist
@@ -1136,20 +1133,20 @@
 
                     function handlePayPalLoaded(e) {
                         e.stopPropagation();
-                        // $paypalSelector.show();
                         self.myGateway.handlePayPalLoaded();
                     }
 
                     function handlePayPalReady(e) {
-                        console.log(e.target);
                         $imgSelector = $(e.target).find('img');
+                        $imgSelector.off('ready', handlePayPalReady);
+                        self.myGateway.handlePayPalReady();
                         $imgSelector.one('load', handlePayPalLoaded)
                         .each(function() {
-                          if(this.complete) $(this).load();
+                          if(this.complete) {
+                            $(this).load();
+                            }
                         });
                         e.stopPropagation();
-                        // $paypalSelector.show();
-                        self.myGateway.handlePayPalReady();
                     }
 
                     function handleDOMNodeInserted(event) {
@@ -1158,8 +1155,6 @@
                             handlePayPalReady(event);
                         }
                     }
-
-                    // $paypalSelector.hide();
 
                     $(document).on('DOMNodeInserted', this.myGateway.paypalButtonSelector + " A", handleDOMNodeInserted);
 
