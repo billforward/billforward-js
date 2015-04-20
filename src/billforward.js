@@ -1135,7 +1135,7 @@
 
                     function handlePayPalLoaded(e) {
                         e.stopPropagation();
-                        $paypalSelector.show();
+                        // $paypalSelector.show();
                         self.myGateway.handlePayPalLoaded();
                     }
 
@@ -1158,7 +1158,7 @@
                         }
                     }
 
-                    $paypalSelector.hide();
+                    // $paypalSelector.hide();
 
                     $(document).on('DOMNodeInserted', this.myGateway.paypalButtonSelector + " A", handleDOMNodeInserted);
 
@@ -1792,7 +1792,7 @@
 
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
-            $registrationRequester.hide();
+            // $registrationRequester.hide();
             $registrationRequester.css("border", viewOptions.border);
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
@@ -1805,7 +1805,7 @@
                 e.stopPropagation();
                 $registrationRequester.off('load', handleIFrameLoaded);
                 self.myGateway.handleIFrameLoaded();
-                $registrationRequester.show();
+                // $registrationRequester.show();
             }
             $registrationRequester.ready(handlePayPalReadyIFrameReady);
             $registrationRequester.off('load', handleIFrameLoaded);
