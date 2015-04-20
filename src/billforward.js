@@ -1810,7 +1810,7 @@
                 self.myGateway.handleIFrameLoaded();
                 // $registrationRequester.show();
             }
-            $registrationRequester.ready(handlePayPalReadyIFrameReady);
+            $registrationRequester.ready(handleIFrameReady);
             $registrationRequester.off('load', handleIFrameLoaded);
             $registrationRequester.one('load', handleIFrameLoaded);
         };
