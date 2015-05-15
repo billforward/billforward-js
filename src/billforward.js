@@ -28,7 +28,7 @@
             this.loaded = true;
 
             for (var i = this.deferredTransactions.length-1; this.deferredTransactions.length>0; i--) {
-                this.deferredTransactions.splice(i, 1)[0].do();
+                this.deferredTransactions.splice(i, 1)[0]['do']();
             }
         };
 
@@ -285,7 +285,7 @@
             }
         })();
 
-        p.do = function() {
+        p['do'] = function() {
             var self = this;
 
             var transactionClass = self.bfjs.gatewayTransactionClasses[self.targetGateway];
@@ -697,7 +697,7 @@
             var self = this;
 
             var deferredTransaction = bfjs.TransactionBase.construct();
-            deferredTransaction.do = function() {
+            deferredTransaction['do'] = function() {
                 self.doPreAuth(self.preAuthRequestPayload);
             };
 
@@ -709,7 +709,7 @@
 
             // if (!this.submitDanceBegun) {
                 var deferredTransaction = bfjs.TransactionBase.construct();
-                deferredTransaction.do = function() {
+                deferredTransaction['do'] = function() {
                     /*if (disableForm) {
                         disableForm();
                     }
@@ -775,7 +775,7 @@
             }
         })();
 
-        p.do = function() {
+        p['do'] = function() {
             var payload = {
                 "@type": "StripePreAuthRequest",
                 "gateway": "Stripe"
@@ -1007,7 +1007,7 @@
             }
         })();
 
-        p.do = function() {
+        p['do'] = function() {
             var payload = {
                 "@type": "BraintreePreAuthRequest",
                 "gateway": "Braintree",
@@ -1349,7 +1349,7 @@
             }
         })();
 
-        p.do = function() {
+        p['do'] = function() {
             var payload = {
                 "@type": "SpreedlyPreAuthRequest",
                 "gateway": "Spreedly"
@@ -1641,7 +1641,7 @@
             }
         })();
 
-        p.do = function() {
+        p['do'] = function() {
             this.VPSProtocol = "3.00";
             var payload = {
                 "@type": "SagePayPreAuthRequest",
