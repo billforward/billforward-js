@@ -377,7 +377,7 @@
                 headers: {
                     'Authorization': 'Bearer '+auth
                 },
-            }
+            };
             return ajaxObj;
         };
 
