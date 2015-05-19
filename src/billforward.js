@@ -1760,7 +1760,7 @@
 
             var viewOptions = $.extend({
                 width: "450px",
-                height: "480px",
+                height: "450px",
                 border: "none"
             }, this.myGateway.sagePayFormContainerOptions);
 
