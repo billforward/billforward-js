@@ -1759,8 +1759,8 @@
             var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
 
             var viewOptions = $.extend({
-                width: "398px",
-                height: "464px",
+                width: "450px",
+                height: "480px",
                 border: "none"
             }, this.myGateway.sagePayFormContainerOptions);
 
@@ -2086,7 +2086,7 @@
             href: urlParser.href,
             pathname: urlParser.pathname,
             protocol: urlParser.protocol,
-            origin: urlParser.origin
+            origin: urlParser.origin || urlParser.protocol+"//"+urlParser.hostname
         };
     };
 
