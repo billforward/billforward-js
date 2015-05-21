@@ -1988,6 +1988,9 @@
         var stripeActor;
         for (var i=0; i<bfjs.lateActors.length; i++) {
             actor = bfjs.lateActors[i];
+            if (!actor.loadMe) {
+                continue;
+            }
             
             var loadedCallback = actor.loadedCallback;
             
@@ -2031,9 +2034,7 @@
         }
 
         for (var i = 0; i<queue.length; i++) {
-            if (queue[i].actor.loadMe) {
-                bfjs.loadScript(queue[i].src, queue[i].callback, queue[i].actor);   
-            }
+            bfjs.loadScript(queue[i].src, queue[i].callback, queue[i].actor);
         }
     };
 
