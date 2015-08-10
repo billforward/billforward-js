@@ -242,6 +242,38 @@
         return TheClass;
     })();
 
+    bfjs.PayVisionGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'payvision';
+            this.payvisionFormContainerSelector = null;
+            this.payvisionFormContainerOptions = {};
+            this.getDeferredCardDetails = function() { return {} };
+            this.handleIFrameFetchBegin = function() { return {} };
+            this.handleIFrameReady = function() { return {} };
+            this.handleIFrameLoaded = function() { return {} };
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -1967,6 +1999,303 @@
         return TheClass;
     })();
 
+    bfjs.PayVisionTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            // this.VPSProtocol = "3.00";
+            var payload = {
+                "@type": "PayVisionPreAuthRequest",
+                "gateway": "Payvision",
+                // "currency": "GBP",
+                // "VPSProtocol": this.VPSProtocol,
+                // "formProfile": "LOW",
+                // "billForwardURL": this.transaction.bfjs.state.api.url,
+                // "billForwardPublicToken": this.transaction.bfjs.state.api.token
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var failed = false;
+            var payload;
+            try {
+                payload = data.results[0];
+                /*if (!payload.VPSProtocol
+                    || !payload.vendor
+                    || !payload.vendorTxCode
+                    || !payload.currency
+                    || !payload.notificationEndpoint
+                    || !payload.environment
+                    ) {
+                    failed = true;
+                }*/
+
+                if (!payload.VPSProtocol
+                    || !payload.nextURL
+                    ) {
+                    failed = true;
+                }
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+
+            if (this.VPSProtocol !== payload.VPSProtocol) {
+                return this.ultimateFailure({
+                    code: 2030,
+                    message: "Preauthorization failed. We do not support SagePay VPSProtocol '"+payload.VPSProtocol+"'.",
+                    detailObj: data
+                });
+            }
+
+            // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
+            // var auth = this.transaction.bfjs.state.api.token;
+
+            // var callbackURL = fullURL+"?access_token="+auth;
+            // // var callbackURL = fullURL;
+            // // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
+
+            // var postVars = {
+            //     VPSProtocol: payload.VPSProtocol,
+            //     TxType: "TOKEN",
+            //     Vendor: payload.vendor,
+            //     VendorTxCode: payload.vendorTxCode,
+            //     Currency: payload.currency,
+            //     Profile: "LOW",
+            //     Language: "EN",
+            //     NotificationURL: callbackURL
+            // };
+
+            /*var windowProxy;
+            window.onload=function(){ 
+                // Create a proxy window to send to and receive 
+                // messages from the iFrame
+                windowProxy = new Porthole.WindowProxy(
+                    'http://other-domain.com/proxy.html', 'guestFrame');
+
+                // Register an event handler to receive messages;
+                windowProxy.addEventListener(onMessage);
+            };*/
+
+            // console.log(this.transaction.bfjs.state.api.url);
+
+            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
+            // console.log(bfAPIURLParsed);
+
+            var self = this;
+
+            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+
+            function handleIFrameResponse(e) {
+                var originalEvent = e.originalEvent;
+                // console.log(originalEvent);
+                // console.log(bfAPIURLParsed);
+                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
+                if (originalEvent.origin === bfAPIURLParsed.origin) {
+                    var $registrationRequester = $("#"+registrationRequesterID);
+                    $registrationRequester.remove();
+                    self.gatewayResponseHandler.call(self, originalEvent.data);
+                }
+              };
+            $(window).off('message', handleIFrameResponse);
+            $(window).one('message', handleIFrameResponse);
+
+            var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
+
+            var viewOptions = $.extend({
+                width: "450px",
+                height: "450px",
+                border: "none"
+            }, this.myGateway.sagePayFormContainerOptions);
+
+            this.myGateway.handleIFrameFetchBegin();
+
+            $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
+            var $registrationRequester = $("#"+registrationRequesterID);
+            // $registrationRequester.hide();
+            $registrationRequester.css("border", viewOptions.border);
+            $registrationRequester.width(viewOptions.width);
+            $registrationRequester.height(viewOptions.height);
+
+            function handleIFrameReady() {
+                $registrationRequester.off('ready', handleIFrameReady);
+                self.myGateway.handleIFrameReady();
+            }
+            function handleIFrameLoaded(e) {
+                e.stopPropagation();
+                $registrationRequester.off('load', handleIFrameLoaded);
+                self.myGateway.handleIFrameLoaded();
+                // $registrationRequester.show();
+            }
+            $registrationRequester.ready(handleIFrameReady);
+            $registrationRequester.off('load', handleIFrameLoaded);
+            $registrationRequester.one('load', handleIFrameLoaded);
+        };
+
+        p.gatewayResponseHandler = function(data) {
+            var self = this;
+
+            var malformedResponse = function(data) {
+                var bfjsError = {
+                    code: 5100,
+                    message: "Card capture to SagePay failed; malformed response.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var parsed;
+            try {
+                parsed = JSON.parse(data);
+            } catch(err) {
+                var bfjsError = {
+                    code: 5101,
+                    message: "Card capture to SagePay failed; malformed response (expected JSON-encoded).",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            }
+
+            var successHandler = function(data) {
+                if (!data.token) {
+                    return malformedResponse(data);
+                }
+
+                if (data.token === "null") {
+                    var bfjsError = {
+                        code: 5201,
+                        message: "Card capture to SagePay failed; customer aborted token registration.",
+                        detailObj: data
+                    };
+                    return self.ultimateFailure(bfjsError);
+                }
+
+                var payload = {
+                    "@type": 'SagePayAuthCaptureRequest',
+                    "gateway": "SagePay",
+                    "cardType": data.cardType,
+                    "expiryDate": data.expiryDate,
+                    "last4Digits": data.last4Digits,
+                    "cardToken": data.token,
+                    "accountID": self.transaction.accountID
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+
+                // extend cardDetails with late card details, if applicable
+                var lateCardDetails = {};
+                if (self.myGateway.getDeferredCardDetails) {
+                    $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
+                }
+                var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    valueFromForm = extendedDetails[i];
+                    switch(i) {
+                        case 'use-as-default-payment-method':
+                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                        break;
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                return self.doAuthCapture(payload);
+            };
+
+            var invalidHandler = function(data) {
+                var reason = data.statusDetail;
+                var bfjsError = {
+                    code: 5010,
+                    message: "Card capture to SagePay failed; card rejected. Reason: '"+reason+"'",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var errorHandler = function(data) {
+                var bfjsError = {
+                    code: 5020,
+                    message: "Card capture to SagePay failed; error occurred in BillForward server during token verification.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            switch(parsed.status) {
+                case 'OK':
+                    return successHandler(parsed);
+                case 'INVALID':
+                    return invalidHandler(parsed);
+                case 'ERROR':
+                    return errorHandler(parsed);
+                default:
+                    return malformedResponse(parsed);
+            }
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -1974,14 +2303,16 @@
         'stripe': bfjs.StripeGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
-        'sagepay': bfjs.SagePayGateway.construct()
+        'sagepay': bfjs.SagePayGateway.construct(),
+        'payvision': bfjs.PayVisionGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
-        'sagepay': bfjs.SagePayTransaction
+        'sagepay': bfjs.SagePayTransaction,
+        'payvision': bfjs.PayVisionTransaction
     };
 
     bfjs.lateActors = [
@@ -1989,7 +2320,8 @@
         bfjs.gatewayInstances['stripe'],
         bfjs.gatewayInstances['braintree'],
         bfjs.gatewayInstances['generic'],
-        bfjs.gatewayInstances['sagepay']
+        bfjs.gatewayInstances['sagepay'],
+        bfjs.gatewayInstances['payvision']
     ];
 
     bfjs.state = {
@@ -2217,6 +2549,16 @@
         bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
 
+    bfjs.addPayVisionForm = function(selector, options, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
+        // supported for SagePay only
+        bfjs.gatewayInstances['payvision'].payvisionFormContainerSelector = selector;
+        bfjs.gatewayInstances['payvision'].payvisionFormContainerOptions = options || {};
+        bfjs.gatewayInstances['payvision'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
+        bfjs.gatewayInstances['payvision'].handleIFrameFetchBegin = handleIFrameFetchBegin || function() { };
+        bfjs.gatewayInstances['payvision'].handleIFrameReady = handleIFrameReady || function() { };
+        bfjs.gatewayInstances['payvision'].handleIFrameLoaded = handleIFrameLoaded || function() { };
+    };
+
     bfjs.isTransportShimNecessary = function() {
         // enforce that transport contacts BF using the a protocol matching that with which the page was loaded
 
@@ -2294,6 +2636,7 @@
                 case 'braintree':
                 case 'generic':
                 case 'sagepay':
+                case 'payvision':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
