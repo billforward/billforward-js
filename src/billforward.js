@@ -2075,6 +2075,8 @@
 
                 if (!payload.checkoutID
                     || !payload.redirectEndpoint
+                    || !payload.oppwaDomain
+                    || !payload.oppwaPaymentWidgetsVersion
                     ) {
                     failed = true;
                 }
@@ -2200,8 +2202,8 @@
 
             // var checkoutID = payload.checkoutID;
 
-            var domain = "https://test.oppwa.com";
-            var version = "v1";
+            var domain = payload.oppwaDomain;
+            var version = payload.oppwaPaymentWidgetsVersion;
             var endpoint = "paymentWidgets.js?checkoutId="+payload.checkoutID;
 
             var payvisionUrl = [domain, version, endpoint].join("/");
