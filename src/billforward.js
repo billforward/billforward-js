@@ -2158,6 +2158,7 @@
 
             var controller = "tokenization/";
             var endpoint = payload.redirectEndpoint;
+            // var auth = encodeURIComponent("?access_token="+this.transaction.bfjs.state.api.token);
             var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
 
             $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'" src="about:blank" frameborder="0"/>');
