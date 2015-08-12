@@ -2160,9 +2160,12 @@
             var endpoint = payload.redirectEndpoint;
             var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
 
-            $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'"></iframe>');
+            $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'" src="about:blank" frameborder="0"/>');
+
+            var cardBrands = ["VISA","MASTER","AMEX"].join(" ");
+
             var $payvisionIframe = $("#"+payvisionIframeID);
-            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'"></form>');
+            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
             var $payvisionForm = $("#"+payvisionFormID);
             // // $payvisionIframe.hide();
             // $payvisionIframe.css("border", viewOptions.border);
