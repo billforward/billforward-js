@@ -2127,10 +2127,27 @@
 
             // // console.log(bfAPIURLParsed);
 
-            // var self = this;
+            var self = this;
+
+            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var payvisionFormID = "bf-payVisionForm";
             var payvisionIframeID = "bf-payVisionIframe";
+
+            function handleIFrameResponse(e) {
+                var originalEvent = e.originalEvent;
+                console.log(originalEvent);
+                console.log(bfAPIURLParsed);
+                console.log(originalEvent.origin, bfAPIURLParsed.origin);
+                if (originalEvent.origin === bfAPIURLParsed.origin) {
+                    $(window).off('message', handleIFrameResponse);
+                    var $payvisionIframe = $("#"+payvisionIframeID);
+                    $payvisionIframe.remove();
+                    self.gatewayResponseHandler.call(self, originalEvent.data);
+                }
+              };
+            $(window).off('message', handleIFrameResponse);
+            $(window).on('message', handleIFrameResponse);
 
             // function handleIFrameResponse(e) {
             //     var originalEvent = e.originalEvent;
@@ -2165,8 +2182,6 @@
                 .attr('type', 'text/javascript')
                 .text('var wpwlOptions = '+JSON.stringify(wpwlOptions, null, "  ")+';')
                 .appendTo(this.myGateway.payvisionFormContainerSelector);
-
-            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var controller = "tokenization/";
             var endpoint = payload.redirectEndpoint;
@@ -2253,7 +2268,7 @@
             var malformedResponse = function(data) {
                 var bfjsError = {
                     code: 5100,
-                    message: "Card capture to SagePay failed; malformed response.",
+                    message: "Card capture to PayVision failed; malformed response.",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
@@ -2265,34 +2280,32 @@
             } catch(err) {
                 var bfjsError = {
                     code: 5101,
-                    message: "Card capture to SagePay failed; malformed response (expected JSON-encoded).",
+                    message: "Card capture to PayVision failed; malformed response (expected JSON-encoded).",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
             }
 
             var successHandler = function(data) {
-                if (!data.token) {
+                if (!data.id
+                    || !data.resourcePath) {
                     return malformedResponse(data);
                 }
 
                 if (data.token === "null") {
                     var bfjsError = {
                         code: 5201,
-                        message: "Card capture to SagePay failed; customer aborted token registration.",
+                        message: "Card capture to PayVision failed; customer aborted token registration.",
                         detailObj: data
                     };
                     return self.ultimateFailure(bfjsError);
                 }
 
                 var payload = {
-                    "@type": 'SagePayAuthCaptureRequest',
-                    "gateway": "SagePay",
-                    "cardType": data.cardType,
-                    "expiryDate": data.expiryDate,
-                    "last4Digits": data.last4Digits,
-                    "cardToken": data.token,
-                    "accountID": self.transaction.accountID
+                    "@type": 'PayVisionAuthCaptureRequest',
+                    "gateway": "Payvision",
+                    "registrationID": data.id,
+                    "registrationResourcePath": data.resourcePath
                 };
 
                 // add BF-only attributes here
@@ -2330,7 +2343,7 @@
                 var reason = data.statusDetail;
                 var bfjsError = {
                     code: 5010,
-                    message: "Card capture to SagePay failed; card rejected. Reason: '"+reason+"'",
+                    message: "Card capture to PayVision failed; card rejected. Reason: '"+reason+"'",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
@@ -2339,13 +2352,15 @@
             var errorHandler = function(data) {
                 var bfjsError = {
                     code: 5020,
-                    message: "Card capture to SagePay failed; error occurred in BillForward server during token verification.",
+                    message: "Card capture to PayVision failed; error occurred in BillForward server during token verification.",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
             };
 
-            switch(parsed.status) {
+            return successHandler(parsed);
+
+            /*switch(parsed.status) {
                 case 'OK':
                     return successHandler(parsed);
                 case 'INVALID':
@@ -2354,7 +2369,7 @@
                     return errorHandler(parsed);
                 default:
                     return malformedResponse(parsed);
-            }
+            }*/
         };
 
         return TheClass;
