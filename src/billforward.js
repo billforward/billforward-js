@@ -2074,6 +2074,7 @@
                 }*/
 
                 if (!payload.checkoutID
+                    || !payload.redirectEndpoint
                     ) {
                     failed = true;
                 }
@@ -2152,11 +2153,16 @@
             // }, this.myGateway.sagePayFormContainerOptions);
 
             // this.myGateway.handleIFrameFetchBegin();
-            payload.nextURL = "./";
+
+            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
+            var controller = "tokenization/";
+            var endpoint = payload.redirectEndpoint;
+            var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
 
             $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'"></iframe>');
             var $payvisionIframe = $("#"+payvisionIframeID);
-            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+payload.nextURL+'" target="'+payvisionIframeID+'"></form>');
+            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'"></form>');
             var $payvisionForm = $("#"+payvisionFormID);
             // // $payvisionIframe.hide();
             // $payvisionIframe.css("border", viewOptions.border);
