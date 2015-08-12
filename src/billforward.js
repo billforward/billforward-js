@@ -2154,6 +2154,16 @@
 
             // this.myGateway.handleIFrameFetchBegin();
 
+            var wpwlOptions = {
+                paymentTarget: payvisionIframeID,
+                shopperResultTarget: payvisionIframeID
+            };
+
+            $('<script>')
+                .attr('type', 'text/javascript')
+                .text('var wpwlOptions = '+JSON.stringify(wpwlOptions, null, "  ")+';')
+                .appendTo(this.myGateway.payvisionFormContainerSelector);
+
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var controller = "tokenization/";
@@ -2168,6 +2178,7 @@
             var $payvisionIframe = $("#"+payvisionIframeID);
             $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
             var $payvisionForm = $("#"+payvisionFormID);
+
             // // $payvisionIframe.hide();
             // $payvisionIframe.css("border", viewOptions.border);
             // $payvisionIframe.width(viewOptions.width);
