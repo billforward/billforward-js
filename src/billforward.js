@@ -2073,8 +2073,7 @@
                     failed = true;
                 }*/
 
-                if (!payload.VPSProtocol
-                    || !payload.nextURL
+                if (!payload.checkoutID
                     ) {
                     failed = true;
                 }
@@ -2090,13 +2089,51 @@
                 });
             }
 
-            if (this.VPSProtocol !== payload.VPSProtocol) {
-                return this.ultimateFailure({
-                    code: 2030,
-                    message: "Preauthorization failed. We do not support SagePay VPSProtocol '"+payload.VPSProtocol+"'.",
-                    detailObj: data
-                });
-            }
+            // var checkoutID = payload.checkoutID;
+
+            var domain = "https://test.oppwa.com";
+            var version = "v1";
+            var endpoint = "paymentWidgets.js?checkoutId="+payload.checkoutID;
+
+            var payvisionUrl = [domain, version, endpoint].join("/");
+
+            //<script src="https://test.oppwa.com/v1/paymentWidgets.js?checkoutId={checkoutId}"></script>
+
+            var payVisionActor = (function() {
+                var TheClass = function() {
+                    // statics
+                    this.key = 'stripe';
+                    this.depUrl = payvisionUrl;
+                    this.depName = "Payvision checkout"+payload.checkoutID;
+                    this.depObj = null;
+                    this.loadMe = true;
+                };
+
+                var p = TheClass.prototype = new bfjs.GatewayActor();
+                p.constructor = TheClass;
+
+                TheClass.construct = (function() {
+                    // factory pattern for invoking own constructor with arguments
+                    // basically: return new this(arguments)
+                    
+                    function lambda(args) {
+                        return TheClass.apply(this, args);
+                    }
+                    lambda.prototype = TheClass.prototype;
+
+                    return function() {
+                        return new lambda(arguments);
+                    }
+                })();
+
+                return TheClass;
+            })().construct();
+
+            var payvisionLoadedCallback = function() {
+                console.log(arguments);
+            };
+
+            this.transaction.bfjs.loadScript(payvisionUrl, payvisionLoadedCallback, payVisionActor);
 
             // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
             // var auth = this.transaction.bfjs.state.api.token;
@@ -2129,58 +2166,58 @@
 
             // console.log(this.transaction.bfjs.state.api.url);
 
-            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+            // var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
-            // console.log(bfAPIURLParsed);
+            // // console.log(bfAPIURLParsed);
 
-            var self = this;
+            // var self = this;
 
-            var registrationRequesterID = "bf-sagePayRegistrationRequester";
+            // var registrationRequesterID = "bf-sagePayRegistrationRequester";
 
-            function handleIFrameResponse(e) {
-                var originalEvent = e.originalEvent;
-                // console.log(originalEvent);
-                // console.log(bfAPIURLParsed);
-                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
-                if (originalEvent.origin === bfAPIURLParsed.origin) {
-                    var $registrationRequester = $("#"+registrationRequesterID);
-                    $registrationRequester.remove();
-                    self.gatewayResponseHandler.call(self, originalEvent.data);
-                }
-              };
-            $(window).off('message', handleIFrameResponse);
-            $(window).one('message', handleIFrameResponse);
+            // function handleIFrameResponse(e) {
+            //     var originalEvent = e.originalEvent;
+            //     // console.log(originalEvent);
+            //     // console.log(bfAPIURLParsed);
+            //     // console.log(originalEvent.origin, bfAPIURLParsed.origin);
+            //     if (originalEvent.origin === bfAPIURLParsed.origin) {
+            //         var $registrationRequester = $("#"+registrationRequesterID);
+            //         $registrationRequester.remove();
+            //         self.gatewayResponseHandler.call(self, originalEvent.data);
+            //     }
+            //   };
+            // $(window).off('message', handleIFrameResponse);
+            // $(window).one('message', handleIFrameResponse);
 
-            var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
+            // var $sagePayFormContainerSelector = $(this.myGateway.sagePayFormContainerSelector);
 
-            var viewOptions = $.extend({
-                width: "450px",
-                height: "450px",
-                border: "none"
-            }, this.myGateway.sagePayFormContainerOptions);
+            // var viewOptions = $.extend({
+            //     width: "450px",
+            //     height: "450px",
+            //     border: "none"
+            // }, this.myGateway.sagePayFormContainerOptions);
 
-            this.myGateway.handleIFrameFetchBegin();
+            // this.myGateway.handleIFrameFetchBegin();
 
-            $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
-            var $registrationRequester = $("#"+registrationRequesterID);
-            // $registrationRequester.hide();
-            $registrationRequester.css("border", viewOptions.border);
-            $registrationRequester.width(viewOptions.width);
-            $registrationRequester.height(viewOptions.height);
+            // $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
+            // var $registrationRequester = $("#"+registrationRequesterID);
+            // // $registrationRequester.hide();
+            // $registrationRequester.css("border", viewOptions.border);
+            // $registrationRequester.width(viewOptions.width);
+            // $registrationRequester.height(viewOptions.height);
 
-            function handleIFrameReady() {
-                $registrationRequester.off('ready', handleIFrameReady);
-                self.myGateway.handleIFrameReady();
-            }
-            function handleIFrameLoaded(e) {
-                e.stopPropagation();
-                $registrationRequester.off('load', handleIFrameLoaded);
-                self.myGateway.handleIFrameLoaded();
-                // $registrationRequester.show();
-            }
-            $registrationRequester.ready(handleIFrameReady);
-            $registrationRequester.off('load', handleIFrameLoaded);
-            $registrationRequester.one('load', handleIFrameLoaded);
+            // function handleIFrameReady() {
+            //     $registrationRequester.off('ready', handleIFrameReady);
+            //     self.myGateway.handleIFrameReady();
+            // }
+            // function handleIFrameLoaded(e) {
+            //     e.stopPropagation();
+            //     $registrationRequester.off('load', handleIFrameLoaded);
+            //     self.myGateway.handleIFrameLoaded();
+            //     // $registrationRequester.show();
+            // }
+            // $registrationRequester.ready(handleIFrameReady);
+            // $registrationRequester.off('load', handleIFrameLoaded);
+            // $registrationRequester.one('load', handleIFrameLoaded);
         };
 
         p.gatewayResponseHandler = function(data) {
