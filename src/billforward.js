@@ -2126,7 +2126,8 @@
 
             // var self = this;
 
-            var registrationRequesterID = "bf-payVisionRegistrationRequester";
+            var payvisionFormID = "bf-payVisionForm";
+            var payvisionIframeID = "bf-payVisionIframe";
 
             // function handleIFrameResponse(e) {
             //     var originalEvent = e.originalEvent;
@@ -2134,8 +2135,8 @@
             //     // console.log(bfAPIURLParsed);
             //     // console.log(originalEvent.origin, bfAPIURLParsed.origin);
             //     if (originalEvent.origin === bfAPIURLParsed.origin) {
-            //         var $registrationRequester = $("#"+registrationRequesterID);
-            //         $registrationRequester.remove();
+            //         var $payvisionIframe = $("#"+payvisionIframeID);
+            //         $payvisionIframe.remove();
             //         self.gatewayResponseHandler.call(self, originalEvent.data);
             //     }
             //   };
@@ -2153,26 +2154,28 @@
             // this.myGateway.handleIFrameFetchBegin();
             payload.nextURL = "./";
 
-            $payvisionFormContainerSelector.append('<form id="'+registrationRequesterID+'" class="paymentWidgets" action="'+payload.nextURL+'"></form>');
-            var $registrationRequester = $("#"+registrationRequesterID);
-            // // $registrationRequester.hide();
-            // $registrationRequester.css("border", viewOptions.border);
-            // $registrationRequester.width(viewOptions.width);
-            // $registrationRequester.height(viewOptions.height);
+            $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'"></iframe>');
+            var $payvisionIframe = $("#"+payvisionIframeID);
+            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+payload.nextURL+'" target="'+payvisionIframeID+'"></form>');
+            var $payvisionForm = $("#"+payvisionFormID);
+            // // $payvisionIframe.hide();
+            // $payvisionIframe.css("border", viewOptions.border);
+            // $payvisionIframe.width(viewOptions.width);
+            // $payvisionIframe.height(viewOptions.height);
 
             // function handleIFrameReady() {
-            //     $registrationRequester.off('ready', handleIFrameReady);
+            //     $payvisionIframe.off('ready', handleIFrameReady);
             //     self.myGateway.handleIFrameReady();
             // }
             // function handleIFrameLoaded(e) {
             //     e.stopPropagation();
-            //     $registrationRequester.off('load', handleIFrameLoaded);
+            //     $payvisionIframe.off('load', handleIFrameLoaded);
             //     self.myGateway.handleIFrameLoaded();
-            //     // $registrationRequester.show();
+            //     // $payvisionIframe.show();
             // }
-            // $registrationRequester.ready(handleIFrameReady);
-            // $registrationRequester.off('load', handleIFrameLoaded);
-            // $registrationRequester.one('load', handleIFrameLoaded);
+            // $payvisionIframe.ready(handleIFrameReady);
+            // $payvisionIframe.off('load', handleIFrameLoaded);
+            // $payvisionIframe.one('load', handleIFrameLoaded);
 
             // var checkoutID = payload.checkoutID;
 
