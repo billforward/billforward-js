@@ -248,6 +248,7 @@
             this.key = 'payvision';
             this.payvisionFormContainerSelector = null;
             this.payvisionFormContainerOptions = {};
+            this.supportedCardBrands = [];
             this.getDeferredCardDetails = function() { return {} };
             this.handleIFrameFetchBegin = function() { return {} };
             this.handleIFrameReady = function() { return {} };
@@ -2193,7 +2194,7 @@
 
             $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'" src="about:blank" frameborder="0"/>');
 
-            var cardBrands = ["VISA","MASTER","AMEX"].join(" ");
+            var cardBrands = this.myGateway.supportedCardBrands.join(" ");
 
             var $payvisionIframe = $("#"+payvisionIframeID);
             $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
@@ -2631,10 +2632,11 @@
         bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
 
-    bfjs.addPayVisionForm = function(selector, options, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
+    bfjs.addPayVisionForm = function(selector, options, supportedCardBrands, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
         // supported for SagePay only
         bfjs.gatewayInstances['payvision'].payvisionFormContainerSelector = selector;
         bfjs.gatewayInstances['payvision'].payvisionFormContainerOptions = options || {};
+        bfjs.gatewayInstances['payvision'].supportedCardBrands = supportedCardBrands || ["VISA","MASTER","AMEX","MAESTRO"];
         bfjs.gatewayInstances['payvision'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
         bfjs.gatewayInstances['payvision'].handleIFrameFetchBegin = handleIFrameFetchBegin || function() { };
         bfjs.gatewayInstances['payvision'].handleIFrameReady = handleIFrameReady || function() { };
