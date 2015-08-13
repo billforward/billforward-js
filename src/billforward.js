@@ -2175,8 +2175,11 @@
 
             var wpwlOptions = {
                 paymentTarget: payvisionIframeID,
-                shopperResultTarget: payvisionIframeID
+                shopperResultTarget: payvisionIframeID,
+                brandDetection: true,
+                style: "plain"
             };
+            //https://acapture.docs.oppwa.com/reference/parameters#testing
 
             $('<script>')
                 .attr('type', 'text/javascript')
