@@ -2202,17 +2202,21 @@
 
             var cardBrands = this.myGateway.supportedCardBrands.join(" ");
 
-            var $payvisionIframe = $("#"+payvisionIframeID);
+            // var $payvisionIframe = $("#"+payvisionIframeID);
             $('<form>')
                 .attr('id', payvisionFormID)
                 .addClass('paymentWidgets')
                 .attr('action', nextURL)
                 .attr('target', payvisionIframeID)
-                .appendTo(this.myGateway.payvisionFormContainerSelector)
+                .appendTo(
+                    $('<div>')
+                    .css('display', "inline-block")
+                    .appendTo(this.myGateway.payvisionFormContainerSelector)
+                    )
                     .text(cardBrands)
                     .css('display', "none");
             // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
-            var $payvisionForm = $("#"+payvisionFormID);
+            // var $payvisionForm = $("#"+payvisionFormID);
 
             // // $payvisionIframe.hide();
             // $payvisionIframe.css("border", viewOptions.border);
