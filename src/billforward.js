@@ -2133,13 +2133,15 @@
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var payvisionFormID = "bf-payVisionForm";
+            var payvisionFormGrandparentID = "bf-payVisionFormGrandparent";
+            var payvisionFormParentID = "bf-payVisionFormParent";
             var payvisionIframeID = "bf-payVisionIframe";
 
             function handleIFrameResponse(e) {
                 var originalEvent = e.originalEvent;
-                console.log(originalEvent);
-                console.log(bfAPIURLParsed);
-                console.log(originalEvent.origin, bfAPIURLParsed.origin);
+                // console.log(originalEvent);
+                // console.log(bfAPIURLParsed);
+                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
                     $(window).off('message', handleIFrameResponse);
                     var $payvisionIframe = $("#"+payvisionIframeID);
@@ -2174,17 +2176,43 @@
 
             // this.myGateway.handleIFrameFetchBegin();
 
-            var wpwlOptions = {
-                paymentTarget: payvisionIframeID,
-                shopperResultTarget: payvisionIframeID,
-                brandDetection: true,
-                style: "plain"
+            function nukeForm(formParentID, childToRemove) {
+                var element = document.getElementById(formParentID);
+                element.parentNode.removeChild(element);
+            }
+
+            var formContainer;
+
+            function wpwlOptionsBuilder(payvisionIframeID, nukeForm, formParentID, childToRemove) {
+                return {
+                    paymentTarget: payvisionIframeID,
+                    shopperResultTarget: payvisionIframeID,
+                    brandDetection: true,
+                    style: "plain",
+                    onAfterSubmit: nukeForm.bind(null, formParentID, childToRemove)
+                };
             };
+            // var serialize = function(thing) {
+            //     return JSON.stringify(thing, function(key, value) {
+            //       if ('function' === typeof value) {
+            //         return String(value); // implicitly `toString` it
+            //       }
+            //       return value;
+            //     }, "\t");
+            // };
             //https://acapture.docs.oppwa.com/reference/parameters#testing
+
+            formContainer = $('<div>')
+                    .css('display', "inline-block")
+                    .attr('id', payvisionFormParentID)
+                    .appendTo($('<div>')
+                        .css('display', "inline-block")
+                        .attr('id', payvisionFormGrandparentID)
+                        .appendTo(this.myGateway.payvisionFormContainerSelector));
 
             $('<script>')
                 .attr('type', 'text/javascript')
-                .text('var wpwlOptions = '+JSON.stringify(wpwlOptions, null, "  ")+';')
+                .text('var wpwlOptions = ('+wpwlOptionsBuilder+')("'+payvisionIframeID+'", '+nukeForm+', "'+payvisionFormGrandparentID+'", "'+payvisionFormParentID+'");')
                 .appendTo(this.myGateway.payvisionFormContainerSelector);
 
             var controller = "tokenization/";
@@ -2209,12 +2237,11 @@
                 .attr('action', nextURL)
                 .attr('target', payvisionIframeID)
                 .appendTo(
-                    $('<div>')
-                    .css('display', "inline-block")
-                    .appendTo(this.myGateway.payvisionFormContainerSelector)
+                    formContainer
                     )
                     .text(cardBrands)
                     .css('display', "none");
+
             // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
             // var $payvisionForm = $("#"+payvisionFormID);
 
