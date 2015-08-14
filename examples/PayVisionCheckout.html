@@ -1,0 +1,80 @@
+<html>
+
+<head>
+    <!-- Include JQuery (optional; useful for handling the form in callback) -->
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <!-- Include BillForwardJS -->
+    <script type="text/javascript" src="src/billforward.js"></script>
+    <script type="text/javascript">
+    var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
+    var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
+
+    // connect to BillForward using credentials
+    BillForward.useAPI(bfAPIURL, bfAPIKey);
+    // use a 'null' account if you want to capture this card against a new customer
+    var accountID = null;
+
+    // Jquery-style selector pointing to your form
+    var formSelector = '#payment-form';
+
+    BillForward.addPayVisionForm('#payVisionForm', {}, ["VISA", "MASTER", "AMEX", "MAESTRO"]);
+
+    var cardDetails = {
+        'cardholder-name': 'Bob Johnson',
+        'email': '1@win.com',
+        'use-as-default-payment-method': false
+    };
+    BillForward.captureCard(cardDetails, 'payvision', accountID, callback);
+
+    function callback(paymentMethod, error) {
+        if (error) {
+            console.error(error);
+
+            $(formSelector).find('.payment-errors').text(error.message);
+            $(formSelector).find('button').prop('disabled', false);
+            // try again!
+            BillForward.captureCard(cardDetails, 'payvision', accountID, callback);
+        } else {
+            console.log(paymentMethod);
+
+            $(formSelector).find('.payment-success').html("Created payment method with ID: '" + paymentMethod.id + "'\nFor account with ID: \t\t'" + paymentMethod.accountID + "'").wrap('<pre />');
+
+            // uncomment the following if you want to post the result to your backend immediately
+            /*
+                    var addPostVariable = function(varName, value) {
+                        // add as 'hidden' form variables those values we wish to submit
+                        $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
+                    }
+
+                    var postVars = {
+                        accountID: paymentMethod.accountID,
+                        paymentMethodID: paymentMethod.id
+                    };
+
+                    for (var i in postVars) {
+                        addPostVariable(i, postVars[i]);
+                    }
+
+                    $(formSelector).attr("action", "handlePayment.php");
+                    $(formSelector).attr("method", "POST");
+
+                    // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
+                    $(formSelector).get(0).submit();
+                    */
+        }
+    };
+    </script>
+</head>
+
+<body>
+    <div id="payment-form">
+        <div class="payment-errors"></div>
+        <div class="payment-success"></div>
+        <p>Test card:
+            <pre>4929000000006</pre>
+        </p>
+        <div id="payVisionForm"></div>
+    </div>
+</body>
+
+</html>
