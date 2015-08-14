@@ -242,6 +242,39 @@
         return TheClass;
     })();
 
+    bfjs.PayVisionGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'payvision';
+            this.payvisionFormContainerSelector = null;
+            this.payvisionFormContainerOptions = {};
+            this.supportedCardBrands = [];
+            this.getDeferredCardDetails = function() { return {} };
+            this.handleIFrameFetchBegin = function() { return {} };
+            this.handleIFrameReady = function() { return {} };
+            this.handleIFrameLoaded = function() { return {} };
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -1967,6 +2000,430 @@
         return TheClass;
     })();
 
+    bfjs.PayVisionTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            // this.VPSProtocol = "3.00";
+            var payload = {
+                "@type": "PayVisionPreAuthRequest",
+                "gateway": "Payvision",
+                // "currency": "GBP",
+                // "VPSProtocol": this.VPSProtocol,
+                // "formProfile": "LOW",
+                // "billForwardURL": this.transaction.bfjs.state.api.url,
+                // "billForwardPublicToken": this.transaction.bfjs.state.api.token
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var failed = false;
+            var payload;
+            try {
+                payload = data.results[0];
+                /*if (!payload.VPSProtocol
+                    || !payload.vendor
+                    || !payload.vendorTxCode
+                    || !payload.currency
+                    || !payload.notificationEndpoint
+                    || !payload.environment
+                    ) {
+                    failed = true;
+                }*/
+
+                if (!payload.checkoutID
+                    || !payload.redirectEndpoint
+                    || !payload.oppwaDomain
+                    || !payload.oppwaPaymentWidgetsVersion
+                    ) {
+                    failed = true;
+                }
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+
+            // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
+            // var auth = this.transaction.bfjs.state.api.token;
+
+            // var callbackURL = fullURL+"?access_token="+auth;
+            // // var callbackURL = fullURL;
+            // // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
+
+            // var postVars = {
+            //     VPSProtocol: payload.VPSProtocol,
+            //     TxType: "TOKEN",
+            //     Vendor: payload.vendor,
+            //     VendorTxCode: payload.vendorTxCode,
+            //     Currency: payload.currency,
+            //     Profile: "LOW",
+            //     Language: "EN",
+            //     NotificationURL: callbackURL
+            // };
+
+            /*var windowProxy;
+            window.onload=function(){ 
+                // Create a proxy window to send to and receive 
+                // messages from the iFrame
+                windowProxy = new Porthole.WindowProxy(
+                    'http://other-domain.com/proxy.html', 'guestFrame');
+
+                // Register an event handler to receive messages;
+                windowProxy.addEventListener(onMessage);
+            };*/
+
+            // console.log(this.transaction.bfjs.state.api.url);
+
+            // var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
+            // // console.log(bfAPIURLParsed);
+
+            var self = this;
+
+            var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
+
+            var payvisionFormID = "bf-payVisionForm";
+            var payvisionFormGrandparentID = "bf-payVisionFormGrandparent";
+            var payvisionFormParentID = "bf-payVisionFormParent";
+            var payvisionIframeID = "bf-payVisionIframe";
+
+            function handleIFrameResponse(e) {
+                var originalEvent = e.originalEvent;
+                // console.log(originalEvent);
+                // console.log(bfAPIURLParsed);
+                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
+                if (originalEvent.origin === bfAPIURLParsed.origin) {
+                    $(window).off('message', handleIFrameResponse);
+                    var $payvisionIframe = $("#"+payvisionIframeID);
+                    $payvisionIframe.remove();
+                    self.gatewayResponseHandler.call(self, originalEvent.data);
+                }
+              };
+            $(window).off('message', handleIFrameResponse);
+            $(window).on('message', handleIFrameResponse);
+
+            // function handleIFrameResponse(e) {
+            //     var originalEvent = e.originalEvent;
+            //     // console.log(originalEvent);
+            //     // console.log(bfAPIURLParsed);
+            //     // console.log(originalEvent.origin, bfAPIURLParsed.origin);
+            //     if (originalEvent.origin === bfAPIURLParsed.origin) {
+            //         var $payvisionIframe = $("#"+payvisionIframeID);
+            //         $payvisionIframe.remove();
+            //         self.gatewayResponseHandler.call(self, originalEvent.data);
+            //     }
+            //   };
+            // $(window).off('message', handleIFrameResponse);
+            // $(window).one('message', handleIFrameResponse);
+
+            // var $payvisionFormContainerSelector = $(this.myGateway.payvisionFormContainerSelector);
+
+            // var viewOptions = $.extend({
+            //     width: "450px",
+            //     height: "450px",
+            //     border: "none"
+            // }, this.myGateway.sagePayFormContainerOptions);
+
+            // this.myGateway.handleIFrameFetchBegin();
+
+            function nukeForm(formParentID, childToRemove) {
+                var element = document.getElementById(formParentID);
+                element.parentNode.removeChild(element);
+            }
+
+            var formContainer;
+
+            function wpwlOptionsBuilder(payvisionIframeID, nukeForm, formParentID, childToRemove) {
+                return {
+                    paymentTarget: payvisionIframeID,
+                    shopperResultTarget: payvisionIframeID,
+                    brandDetection: true,
+                    style: "plain",
+                    onAfterSubmit: nukeForm.bind(null, formParentID, childToRemove)
+                };
+            };
+            // var serialize = function(thing) {
+            //     return JSON.stringify(thing, function(key, value) {
+            //       if ('function' === typeof value) {
+            //         return String(value); // implicitly `toString` it
+            //       }
+            //       return value;
+            //     }, "\t");
+            // };
+            //https://acapture.docs.oppwa.com/reference/parameters#testing
+
+            formContainer = $('<div>')
+                    .css('display', "inline-block")
+                    .attr('id', payvisionFormParentID)
+                    .appendTo($('<div>')
+                        .css('display', "inline-block")
+                        .attr('id', payvisionFormGrandparentID)
+                        .appendTo(this.myGateway.payvisionFormContainerSelector));
+
+            $('<script>')
+                .attr('type', 'text/javascript')
+                .text('var wpwlOptions = ('+wpwlOptionsBuilder+')("'+payvisionIframeID+'", '+nukeForm+', "'+payvisionFormGrandparentID+'", "'+payvisionFormParentID+'");')
+                .appendTo(this.myGateway.payvisionFormContainerSelector);
+
+            var controller = "tokenization/";
+            var endpoint = payload.redirectEndpoint;
+            // var auth = encodeURIComponent("?access_token="+this.transaction.bfjs.state.api.token);
+            var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
+
+            $('<iframe>')
+                .attr('id', payvisionIframeID)
+                .attr('name', payvisionIframeID)
+                .attr('src', "about:blank")
+                .attr('frameborder', "0")
+                .css('display', "none")
+                .appendTo(this.myGateway.payvisionFormContainerSelector);
+
+            var cardBrands = this.myGateway.supportedCardBrands.join(" ");
+
+            // var $payvisionIframe = $("#"+payvisionIframeID);
+            $('<form>')
+                .attr('id', payvisionFormID)
+                .addClass('paymentWidgets')
+                .attr('action', nextURL)
+                .attr('target', payvisionIframeID)
+                .appendTo(
+                    formContainer
+                    )
+                    .text(cardBrands)
+                    .css('display', "none");
+
+            // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
+            // var $payvisionForm = $("#"+payvisionFormID);
+
+            // // $payvisionIframe.hide();
+            // $payvisionIframe.css("border", viewOptions.border);
+            // $payvisionIframe.width(viewOptions.width);
+            // $payvisionIframe.height(viewOptions.height);
+
+            // function handleIFrameReady() {
+            //     $payvisionIframe.off('ready', handleIFrameReady);
+            //     self.myGateway.handleIFrameReady();
+            // }
+            // function handleIFrameLoaded(e) {
+            //     e.stopPropagation();
+            //     $payvisionIframe.off('load', handleIFrameLoaded);
+            //     self.myGateway.handleIFrameLoaded();
+            //     // $payvisionIframe.show();
+            // }
+            // $payvisionIframe.ready(handleIFrameReady);
+            // $payvisionIframe.off('load', handleIFrameLoaded);
+            // $payvisionIframe.one('load', handleIFrameLoaded);
+
+            // var checkoutID = payload.checkoutID;
+
+            var domain = payload.oppwaDomain;
+            var version = payload.oppwaPaymentWidgetsVersion;
+            var endpoint = "paymentWidgets.js?checkoutId="+payload.checkoutID;
+
+            var payvisionUrl = [domain, version, endpoint].join("/");
+
+            //<script src="https://test.oppwa.com/v1/paymentWidgets.js?checkoutId={checkoutId}"></script>
+
+            var payVisionActor = (function() {
+                var TheClass = function() {
+                    // statics
+                    this.key = 'stripe';
+                    this.depUrl = payvisionUrl;
+                    this.depName = "Payvision checkout"+payload.checkoutID;
+                    this.depObj = null;
+                    this.loadMe = true;
+                };
+
+                var p = TheClass.prototype = new bfjs.GatewayActor();
+                p.constructor = TheClass;
+
+                TheClass.construct = (function() {
+                    // factory pattern for invoking own constructor with arguments
+                    // basically: return new this(arguments)
+                    
+                    function lambda(args) {
+                        return TheClass.apply(this, args);
+                    }
+                    lambda.prototype = TheClass.prototype;
+
+                    return function() {
+                        return new lambda(arguments);
+                    }
+                })();
+
+                return TheClass;
+            })().construct();
+
+            var payvisionLoadedCallback = function() {
+                console.log(arguments);
+            };
+
+            this.transaction.bfjs.loadScript(payvisionUrl, payvisionLoadedCallback, payVisionActor);
+        };
+
+        p.gatewayResponseHandler = function(data) {
+            var self = this;
+
+            var malformedResponse = function(data) {
+                var bfjsError = {
+                    code: 5100,
+                    message: "Card capture to PayVision failed; malformed response.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var parsed;
+            try {
+                parsed = JSON.parse(data);
+            } catch(err) {
+                var bfjsError = {
+                    code: 5101,
+                    message: "Card capture to PayVision failed; malformed response (expected JSON-encoded).",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            }
+
+            var successHandler = function(data) {
+                if (!data.id
+                    || !data.resourcePath) {
+                    return malformedResponse(data);
+                }
+
+                if (data.token === "null") {
+                    var bfjsError = {
+                        code: 5201,
+                        message: "Card capture to PayVision failed; customer aborted token registration.",
+                        detailObj: data
+                    };
+                    return self.ultimateFailure(bfjsError);
+                }
+
+                var payload = {
+                    "@type": 'PayVisionAuthCaptureRequest',
+                    "gateway": "Payvision",
+                    "registrationID": data.id,
+                    "registrationResourcePath": data.resourcePath
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+
+                // extend cardDetails with late card details, if applicable
+                var lateCardDetails = {};
+                if (self.myGateway.getDeferredCardDetails) {
+                    $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
+                }
+                var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    valueFromForm = extendedDetails[i];
+                    switch(i) {
+                        case 'use-as-default-payment-method':
+                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                        break;
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                return self.doAuthCapture(payload);
+            };
+
+            var invalidHandler = function(data) {
+                var reason = data.statusDetail;
+                var bfjsError = {
+                    code: 5010,
+                    message: "Card capture to PayVision failed; card rejected. Reason: '"+reason+"'",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var errorHandler = function(data) {
+                var bfjsError = {
+                    code: 5020,
+                    message: "Card capture to PayVision failed; error occurred in BillForward server during token verification.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            return successHandler(parsed);
+
+            /*switch(parsed.status) {
+                case 'OK':
+                    return successHandler(parsed);
+                case 'INVALID':
+                    return invalidHandler(parsed);
+                case 'ERROR':
+                    return errorHandler(parsed);
+                default:
+                    return malformedResponse(parsed);
+            }*/
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -1974,14 +2431,16 @@
         'stripe': bfjs.StripeGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
-        'sagepay': bfjs.SagePayGateway.construct()
+        'sagepay': bfjs.SagePayGateway.construct(),
+        'payvision': bfjs.PayVisionGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
-        'sagepay': bfjs.SagePayTransaction
+        'sagepay': bfjs.SagePayTransaction,
+        'payvision': bfjs.PayVisionTransaction
     };
 
     bfjs.lateActors = [
@@ -1989,7 +2448,8 @@
         bfjs.gatewayInstances['stripe'],
         bfjs.gatewayInstances['braintree'],
         bfjs.gatewayInstances['generic'],
-        bfjs.gatewayInstances['sagepay']
+        bfjs.gatewayInstances['sagepay'],
+        bfjs.gatewayInstances['payvision']
     ];
 
     bfjs.state = {
@@ -2217,6 +2677,17 @@
         bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
 
+    bfjs.addPayVisionForm = function(selector, options, supportedCardBrands, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
+        // supported for SagePay only
+        bfjs.gatewayInstances['payvision'].payvisionFormContainerSelector = selector;
+        bfjs.gatewayInstances['payvision'].payvisionFormContainerOptions = options || {};
+        bfjs.gatewayInstances['payvision'].supportedCardBrands = supportedCardBrands || ["VISA","MASTER","AMEX","MAESTRO"];
+        bfjs.gatewayInstances['payvision'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
+        bfjs.gatewayInstances['payvision'].handleIFrameFetchBegin = handleIFrameFetchBegin || function() { };
+        bfjs.gatewayInstances['payvision'].handleIFrameReady = handleIFrameReady || function() { };
+        bfjs.gatewayInstances['payvision'].handleIFrameLoaded = handleIFrameLoaded || function() { };
+    };
+
     bfjs.isTransportShimNecessary = function() {
         // enforce that transport contacts BF using the a protocol matching that with which the page was loaded
 
@@ -2294,6 +2765,7 @@
                 case 'braintree':
                 case 'generic':
                 case 'sagepay':
+                case 'payvision':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;

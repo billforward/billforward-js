@@ -24,6 +24,7 @@ Currently supported:
 - `braintree`
 - `braintree+paypal`
 - `sagepay`
+- `payvision`
 
 ###Include
 ####Easy mode
@@ -462,6 +463,52 @@ var cardDetails = {
 ```
 
 The BillForward UI gives you the opportunity to specify which types of card you wish to accept through SagePay (using a multi-select).
+
+####PayVision
+
+PayVision is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
+
+```html
+<div id="sagePayFormContainer"></div>
+```
+
+Use `addSagePayForm()` to indicate your intent to use this form.
+
+```js
+// Jquery-style selector pointing to your PayVision hosted form container
+BillForward.addSagePayForm('#payVisionForm');
+
+var cardDetails = {
+};
+
+// Downloads hosted form into your specified container, and binds its submission to a callback of your choice.
+BillForward.captureCard(cardDetails, 'payvision', accountID, callback);
+```
+
+You could also use the same `cardDetails` object to pass metadata into the payment method. The following metadata is honoured for PayVision hosted form invocation:
+
+```js
+var cardDetails = {
+	'email': 'billiam@forward.net',
+    'company-name': 'BillForward',
+    'name-first': 'Bill',
+    'name-last': 'Forward',
+    'phone-mobile': '01189998819',
+	'use-as-default-payment-method': true
+};
+```
+
+You can choose explicitly which card types to include in the form:
+
+```js
+BillForward.addPayVisionForm('#payVisionForm', {}, ["VISA","MASTER","AMEX","MAESTRO"]);
+```
+
+View the [supported card brands](https://acapture.docs.oppwa.com/tutorials/integration-guide/customisation) in ACapture's docs.
+
+Note that async card capture flows (for example necessitating 3D secure, online transfer or virtual wallets) are not presently supported by BillForwardJS.
+
+[Test cards](https://acapture.docs.oppwa.com/reference/parameters#testing) are listed in ACapture's docs.
 
 ###Example checkout
 See the 'examples' folder for examples of full worked checkouts.
