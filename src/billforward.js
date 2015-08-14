@@ -2192,7 +2192,13 @@
             // var auth = encodeURIComponent("?access_token="+this.transaction.bfjs.state.api.token);
             var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
 
-            $payvisionFormContainerSelector.append('<iframe id="'+payvisionIframeID+'" name="'+payvisionIframeID+'" src="about:blank" frameborder="0"/>');
+            $('<iframe>')
+                .attr('id', payvisionIframeID)
+                .attr('name', payvisionIframeID)
+                .attr('src', "about:blank")
+                .attr('frameborder', "0")
+                .css('display', "none")
+                .appendTo(this.myGateway.payvisionFormContainerSelector);
 
             var cardBrands = this.myGateway.supportedCardBrands.join(" ");
 
