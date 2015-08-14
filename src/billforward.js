@@ -2164,7 +2164,7 @@
             // $(window).off('message', handleIFrameResponse);
             // $(window).one('message', handleIFrameResponse);
 
-            var $payvisionFormContainerSelector = $(this.myGateway.payvisionFormContainerSelector);
+            // var $payvisionFormContainerSelector = $(this.myGateway.payvisionFormContainerSelector);
 
             // var viewOptions = $.extend({
             //     width: "450px",
@@ -2203,7 +2203,15 @@
             var cardBrands = this.myGateway.supportedCardBrands.join(" ");
 
             var $payvisionIframe = $("#"+payvisionIframeID);
-            $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
+            $('<form>')
+                .attr('id', payvisionFormID)
+                .addClass('paymentWidgets')
+                .attr('action', nextURL)
+                .attr('target', payvisionIframeID)
+                .appendTo(this.myGateway.payvisionFormContainerSelector)
+                    .text(cardBrands)
+                    .css('display', "none");
+            // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
             var $payvisionForm = $("#"+payvisionFormID);
 
             // // $payvisionIframe.hide();
