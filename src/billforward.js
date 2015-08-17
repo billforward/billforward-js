@@ -2177,31 +2177,37 @@
             //     border: "none"
             // }, this.myGateway.sagePayFormContainerOptions);
 
-            var onAfterSubmit = (function onAfterSubmit() {
+            var configuredPreferences = this.myGateway;
+
+            function onAfterSubmit() {
                 $("#"+payvisionFormParentID).remove();
-                this.myGateway.handleAfterSubmit();
-            }).bind(this);
+                return configuredPreferences.handleAfterSubmit.apply(this, arguments);
+            }
 
             var iframeCommsReady = false;
 
-            var onReadyIframeCommunication = (function onReadyIframeCommunication() {
+            function onReadyIframeCommunication() {
                 if (!iframeCommsReady) {
                     iframeCommsReady = true;
-                    this.myGateway.handleFormUsable();
+                    return configuredPreferences.handleFormUsable.apply(this, arguments);
                 }
-            }).bind(this);
+            }
 
-            (function($, gateway) {
-                this.wpwlOptions = $.merge({
+            function handleFormReady() {
+                return configuredPreferences.handleFormReady.apply(this, arguments);
+            }
+
+            (function($, bespokeOptions) {
+                this.wpwlOptions = $.extend(true, {
                     paymentTarget: payvisionIframeID,
                     shopperResultTarget: payvisionIframeID,
                     style: "plain",
                     brandDetection: true,
                     onAfterSubmit: onAfterSubmit,
-                    onReady: gateway.handleFormReady,
+                    onReady: handleFormReady,
                     onReadyIframeCommunication: onReadyIframeCommunication
-                }, gateway.wpwlOptions);
-            }).call(window, $, this.myGateway);
+                }, bespokeOptions);
+            }).call(window, $, this.myGateway.wpwlOptions);
 
             // function nukeForm(formParentID, childToRemove) {
             //     var element = document.getElementById(formParentID);
@@ -2385,7 +2391,8 @@
                     "@type": 'PayVisionAuthCaptureRequest',
                     "gateway": "Payvision",
                     "registrationID": data.id,
-                    "registrationResourcePath": data.resourcePath
+                    "registrationResourcePath": data.resourcePath,
+                    "accountID": self.transaction.accountID
                 };
 
                 // add BF-only attributes here
