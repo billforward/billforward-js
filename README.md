@@ -510,5 +510,63 @@ Note that async card capture flows (for example necessitating 3D secure, online 
 
 [Test cards](https://acapture.docs.oppwa.com/reference/parameters#testing) are listed in ACapture's docs.
 
+We expose a variety of configuration options for the form interaction:
+
+```js
+// selector for some element on the webpage into which we can insert the Payvision form.
+var formSelector = '#payVisionForm';
+
+// which card brands are enabled for this form
+// https://acapture.docs.oppwa.com/tutorials/integration-guide/customisation
+var supportedCardBrands = ["VISA","MASTER","AMEX","MAESTRO"];
+
+// wpwl form options referred to here:
+// https://acapture.docs.oppwa.com/tutorials/integration-guide/widget-api
+// avoid overriding the following parameters, since we are already overriding them for our own purposes:
+/*
+`onAfterSubmit` // we provide instead a callback `handleAfterSubmit` of our own
+onReadyIframeCommunication // we provide instead a callback `handleFormUsable` of our own
+`onReady` // we provide instead a callback `handleFormReady` of our own
+*/
+var wpwlOptions = {};
+
+// Callbacks provided by BillForwardJS
+var callbacks = {
+	// should card-capture succeed: BF can slurp up additional
+	// metadata specified here, and apply it to the customer's
+	// BF Account.
+	getDeferredCardDetails: function() {
+		// these are all the fields which can be included as extra metadata:
+		return {
+        	'company-name': 'BillMagic',
+        	'name-first'  : 'Billiam',
+        	'name-last'   : 'Forward',
+        	'phone-mobile': '7',
+        	'email':        'no+spam@billforward.net',
+        	'use-as-default-payment-method': true
+        }
+	},
+
+	// We begin requesting the .js responsible for constructing the form
+	handleCheckoutWidgetFetchBegin: function() {},
+	// We successfully finish requesting the .js responsible for constructing the form
+	handleCheckoutWidgetFetchFinish: function() {},
+
+	// We begin embedding the form into the page
+	handleFormFetchBegin: function() {},
+
+	// The form has finished loading (but its iframe may still be preparing)
+	handleFormReady: function() {},
+
+	// The form has finished loading, and its iframe is done preparing; it is ready for interaction, and no spinners remain.
+	handleFormUsable: function() {},
+
+	// Form contents were valid, have been submitted, and are now being sent to BillForward for scrutinization. You can use this callback to present a spinner whilst waiting for the reply from BillForward.
+	handleAfterSubmit: function() {}
+};
+
+BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, callbacks);
+```
+
 ###Example checkout
 See the 'examples' folder for examples of full worked checkouts.
