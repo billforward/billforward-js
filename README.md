@@ -501,7 +501,7 @@ var cardDetails = {
 You can choose explicitly which card types to include in the form:
 
 ```js
-BillForward.addPayVisionForm('#payVisionForm', {}, ["VISA","MASTER","AMEX","MAESTRO"]);
+BillForward.addPayVisionForm('#payVisionForm', ["VISA","MASTER","AMEX","MAESTRO"]);
 ```
 
 View the [supported card brands](https://acapture.docs.oppwa.com/tutorials/integration-guide/customisation) in ACapture's docs.
