@@ -2192,7 +2192,7 @@
             }).bind(this);
 
             (function($, gateway) {
-                this.wpwlOptions = $.extend({
+                this.wpwlOptions = $.merge({
                     paymentTarget: payvisionIframeID,
                     shopperResultTarget: payvisionIframeID,
                     style: "plain",
