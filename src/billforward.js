@@ -250,9 +250,10 @@
             this.wpwlOptions = {};
             this.supportedCardBrands = [];
             this.getDeferredCardDetails = function() { return {} };
-            this.handleIFrameFetchBegin = function() { return {} };
-            this.handleIFrameReady = function() { return {} };
-            this.handleIFrameLoaded = function() { return {} };
+            this.handleFormFetchBegin = function() { return {} };
+            this.handleFormReady = function() { return {} };
+            this.handleFormUsable = function() { return {} };
+            this.handleAfterSubmit = function() { return {} };
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -2133,7 +2134,7 @@
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var payvisionFormID = "bf-payVisionForm";
-            var payvisionFormGrandparentID = "bf-payVisionFormGrandparent";
+            // var payvisionFormGrandparentID = "bf-payVisionFormGrandparent";
             var payvisionFormParentID = "bf-payVisionFormParent";
             var payvisionIframeID = "bf-payVisionIframe";
 
@@ -2174,21 +2175,33 @@
             //     border: "none"
             // }, this.myGateway.sagePayFormContainerOptions);
 
-            // this.myGateway.handleIFrameFetchBegin();
+            this.myGateway.handleFormFetchBegin();
 
-            function onAfterSubmit() {
-                $("#"+payvisionFormParentID).empty();
-            }
+            var onAfterSubmit = (function onAfterSubmit() {
+                $("#"+payvisionFormParentID).remove();
+                this.myGateway.handleAfterSubmit();
+            }).bind(this);
 
-            (function($, bespokeOptions) {
+            var iframeCommsReady = false;
+
+            var onReadyIframeCommunication = (function onReadyIframeCommunication() {
+                if (!iframeCommsReady) {
+                    iframeCommsReady = true;
+                    this.myGateway.handleFormUsable();
+                }
+            }).bind(this);
+
+            (function($, gateway) {
                 this.wpwlOptions = $.extend({
                     paymentTarget: payvisionIframeID,
                     shopperResultTarget: payvisionIframeID,
                     style: "plain",
                     brandDetection: true,
-                    onAfterSubmit: onAfterSubmit
-                }, bespokeOptions);
-            }).call(window, $, this.myGateway.wpwlOptions);
+                    onAfterSubmit: onAfterSubmit,
+                    onReady: gateway.handleFormReady,
+                    onReadyIframeCommunication: onReadyIframeCommunication
+                }, gateway.wpwlOptions);
+            }).call(window, $, this.myGateway);
 
             // function nukeForm(formParentID, childToRemove) {
             //     var element = document.getElementById(formParentID);
@@ -2219,10 +2232,10 @@
             formContainer = $('<div>')
                     .css('display', "inline-block")
                     .attr('id', payvisionFormParentID)
-                    .appendTo($('<div>')
-                        .css('display', "inline-block")
-                        .attr('id', payvisionFormGrandparentID)
-                        .appendTo(this.myGateway.payvisionFormContainerSelector));
+                    // .appendTo($('<div>')
+                    //     .css('display', "inline-block")
+                    //     .attr('id', payvisionFormGrandparentID)
+                        .appendTo(this.myGateway.payvisionFormContainerSelector);
 
             // $('<script>')
             //     .attr('type', 'text/javascript')
@@ -2691,15 +2704,16 @@
         bfjs.gatewayInstances['sagepay'].handleIFrameLoaded = handleIFrameLoaded || function() { };
     };
 
-    bfjs.addPayVisionForm = function(selector, options, supportedCardBrands, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
+    bfjs.addPayVisionForm = function(selector, supportedCardBrands, wpwlOptions, getDeferredCardDetails, handleFormFetchBegin, handleFormReady, handleFormUsable, handleAfterSubmit) {
         // supported for SagePay only
         bfjs.gatewayInstances['payvision'].payvisionFormContainerSelector = selector;
-        bfjs.gatewayInstances['payvision'].wpwlOptions = options || {};
+        bfjs.gatewayInstances['payvision'].wpwlOptions = wpwlOptions || {};
         bfjs.gatewayInstances['payvision'].supportedCardBrands = supportedCardBrands || ["VISA","MASTER","AMEX","MAESTRO"];
         bfjs.gatewayInstances['payvision'].getDeferredCardDetails = getDeferredCardDetails || function() { return {} };
-        bfjs.gatewayInstances['payvision'].handleIFrameFetchBegin = handleIFrameFetchBegin || function() { };
-        bfjs.gatewayInstances['payvision'].handleIFrameReady = handleIFrameReady || function() { };
-        bfjs.gatewayInstances['payvision'].handleIFrameLoaded = handleIFrameLoaded || function() { };
+        bfjs.gatewayInstances['payvision'].handleFormFetchBegin = handleFormFetchBegin || function() { };
+        bfjs.gatewayInstances['payvision'].handleFormReady = handleFormReady || function() { };
+        bfjs.gatewayInstances['payvision'].handleFormUsable = handleFormUsable || function() { };
+        bfjs.gatewayInstances['payvision'].handleAfterSubmit = handleAfterSubmit || function() { };
     };
 
     bfjs.isTransportShimNecessary = function() {

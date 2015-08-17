@@ -17,7 +17,7 @@
     // Jquery-style selector pointing to your form
     var formSelector = '#payment-form';
 
-    BillForward.addPayVisionForm('#payVisionForm', {}, ["VISA", "MASTER", "AMEX", "MAESTRO"]);
+    BillForward.addPayVisionForm('#payVisionForm', ["VISA", "MASTER", "AMEX", "MAESTRO"]);
 
     var cardDetails = {
         'cardholder-name': 'Bob Johnson',
