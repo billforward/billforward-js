@@ -589,6 +589,8 @@
               * 3100 --- (Generic)
                 32xx - Received malformed response
               * 3200 --- (Generic)
+                33xx - Failed to setup dependencies for contacting gateway
+              * 3300 --- (Generic)
 
             Server-side scrutinization of token from gateway:
                 50xx - Verification failed
@@ -2541,7 +2543,8 @@
             this.pageLoadDancer.loadedCallback();
         };
 
-        p.startAuthCapture = function(data) {
+        p.oncePreAuthed = function() {
+            var data = this.preAuthResponsePayload;
             var failed = false;
             var payload;
             try {
@@ -2582,10 +2585,14 @@
             // ) {
             // https://test.adyen.com/hpp/cse/js/{CSE}.shtml
 
-            var domain =
-            payload.env === "Test"
-            ? "https://test.adyen.com"
-            : "";
+            var domain = (function identifyDomain(env) {
+                switch(env) {
+                    case "Test":
+                    return "https://test.adyen.com";
+                    default:
+                    throw new Error("Unrecognised Adyen environment: '"+env+"'");
+                }
+            })(payload.env);
             // var version = payload.oppwaPaymentWidgetsVersion;
             var endpoint = "hpp/cse/js/"+payload.CSEToken+".shtml";
 
@@ -2593,7 +2600,7 @@
 
             //<script type="text/javascript" src="https://test.adyen.com/hpp/cse/js/{CSE}.shtml"></script>
 
-            var adyenActor = (function() {
+            this.adyenActor = (function() {
                 var TheClass = function() {
                     // statics
                     this.key = 'adyen';
@@ -2603,6 +2610,8 @@
                     this.depObj = null;
                     this.loadMe = true;
                     this.avoidHead = true;
+
+                    this.createEncryption = undefined;
                 };
 
                 var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -2626,14 +2635,78 @@
             })().construct();
 
             var adyenLoadedCallback = (function adyenLoadedCallback() {
+                try {
+
+                    // monkey-patch Adyen
+                    (function(adyen) {
+                        if ("function" !== typeof adyen.createEncryptedForm) {
+                            throw new Error("Function from which we were hoping to get magically-injected Adyen CSE token is not present (despite expectations).");
+                        }
+                        if ("function" !== typeof adyen.encrypt.createEncryptedForm) {
+                            throw new Error("Adyen CSE API has changed!");
+                        }
+                        var key;
+                        var oldFunc = adyen.encrypt.createEncryptedForm;
+                        adyen.encrypt.createEncryptedForm = function showMeYourArgs() {
+                            key = arguments[1];
+                        };
+                        adyen.createEncryptedForm();
+                        // tidy up :P
+                        adyen.encrypt.createEncryptedForm = oldFunc;
+                        if (!key) {
+                            throw new Error("We did not receive a meaningful CSE token from our monkey-patched Adyen.");
+                        }
+                        this.adyenActor.createEncryption = function(options) {
+                            return adyen.encrypt.createEncryption(key, options);
+                        }
+                    }).call(this, adyen);
+                } catch(err) {
+                    var bfjsError = {
+                        code: 3300,
+                        message: "Card capture to Adyen failed.",
+                        detailObj: err
+                    };
+                    return this.ultimateFailure(bfjsError);
+                }
+
                 // console.log(arguments);
                 // this.myGateway.handleCheckoutWidgetFetchFinish();
                 // this.myGateway.handleFormFetchBegin();
+                // we are loaded and ready for auth-capture~
+                this.submitDancer.loadedCallback();
             }).bind(this);
 
             // this.myGateway.handleCheckoutWidgetFetchBegin();
 
             this.transaction.bfjs.loadScript(payvisionUrl, adyenLoadedCallback, payVisionActor);
+        };
+
+        p.startAuthCapture = function() {
+            if ("function" !== typeof this.adyenActor.createEncryption) {
+                var bfjsError = {
+                    code: 3300,
+                    message: "Card capture to Adyen failed.",
+                    detailObj: new Error("Monkey-patching of Adyen library did not complete successfully.")
+                };
+                return this.ultimateFailure(bfjsError);
+            }
+
+            var options = {};
+
+            var cseInstance = this.adyenActor.createEncryption(options);
+
+            var cardDetailsProgrammatic = {
+
+            };
+
+            var mappedData = {
+
+            };
+            $.extend(mappedData, {
+              generationtime: this.adyenActor.generationTime
+            })
+
+            this.gatewayResponseHandler(cseInstance.encrypt(mappedData));
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -2648,19 +2721,7 @@
                 return self.ultimateFailure(bfjsError);
             };
 
-            var parsed;
-            try {
-                parsed = JSON.parse(data);
-            } catch(err) {
-                var bfjsError = {
-                    code: 5101,
-                    message: "Card capture to PayVision failed; malformed response (expected JSON-encoded).",
-                    detailObj: data
-                };
-                return self.ultimateFailure(bfjsError);
-            }
-
-            var successHandler = function(data) {
+            function successHandler(data) {
                 if (!data.id
                     || !data.resourcePath) {
                     return malformedResponse(data);
@@ -2676,11 +2737,10 @@
                 }
 
                 var payload = {
-                    "@type": 'PayVisionAuthCaptureRequest',
-                    "gateway": "Payvision",
-                    "registrationID": data.id,
-                    "registrationResourcePath": data.resourcePath,
-                    "accountID": self.transaction.accountID
+                    "@type": "AdyenAuthCaptureRequest",
+                    "gateway": "Adyen",
+                    "adyenEncryptedData": nonce,
+                    "accountID": this.transaction.accountID
                 };
 
                 // add BF-only attributes here
@@ -2714,17 +2774,7 @@
                 return self.doAuthCapture(payload);
             };
 
-            var invalidHandler = function(data) {
-                var reason = data.statusDetail;
-                var bfjsError = {
-                    code: 5010,
-                    message: "Card capture to PayVision failed; card rejected. Reason: '"+reason+"'",
-                    detailObj: data
-                };
-                return self.ultimateFailure(bfjsError);
-            };
-
-            var errorHandler = function(data) {
+            function errorHandler(data) {
                 var bfjsError = {
                     code: 5020,
                     message: "Card capture to PayVision failed; error occurred in BillForward server during token verification.",
@@ -2734,17 +2784,6 @@
             };
 
             return successHandler(parsed);
-
-            /*switch(parsed.status) {
-                case 'OK':
-                    return successHandler(parsed);
-                case 'INVALID':
-                    return invalidHandler(parsed);
-                case 'ERROR':
-                    return errorHandler(parsed);
-                default:
-                    return malformedResponse(parsed);
-            }*/
         };
 
         return TheClass;
