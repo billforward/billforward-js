@@ -278,6 +278,32 @@
         return TheClass;
     })();
 
+    bfjs.AdyenGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'adyen';
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -2310,7 +2336,7 @@
             var payVisionActor = (function() {
                 var TheClass = function() {
                     // statics
-                    this.key = 'stripe';
+                    this.key = 'payvision';
                     this.depUrl = payvisionUrl;
                     this.depName = "Payvision checkout"+payload.checkoutID;
                     this.depObj = null;
@@ -2462,6 +2488,268 @@
         return TheClass;
     })();
 
+    bfjs.AdyenTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+            
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            var payload = {
+                "@type": "AdyenPreAuthRequest",
+                "gateway": "Adyen"
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var failed = false;
+            var payload;
+            try {
+                payload = data.results[0];
+
+                if (!payload.env
+                    || !payload.CSEToken
+                    || !payload.generationTime
+                    ) {
+                    failed = true;
+                }
+
+                failed |= (function isValidDate() {
+                    // Adapted from code by Borgar
+                    // http://stackoverflow.com/a/1353711
+                    if ( Object.prototype.toString.call(d) !== "[object Date]" ) {
+                        return false;
+                    }
+                    return isNaN(d.getTime());
+                })(payload.generationTime);
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+
+            var self = this;
+
+            // if (!payload.env
+            // || !payload.CSEToken
+            // || !payload.generationTime
+            // ) {
+            // https://test.adyen.com/hpp/cse/js/{CSE}.shtml
+
+            var domain =
+            payload.env === "Test"
+            ? "https://test.adyen.com"
+            : "";
+            // var version = payload.oppwaPaymentWidgetsVersion;
+            var endpoint = "hpp/cse/js/"+payload.CSEToken+".shtml";
+
+            var payvisionUrl = [domain, endpoint].join("/");
+
+            //<script type="text/javascript" src="https://test.adyen.com/hpp/cse/js/{CSE}.shtml"></script>
+
+            var adyenActor = (function() {
+                var TheClass = function() {
+                    // statics
+                    this.key = 'adyen';
+                    this.depUrl = payvisionUrl;
+                    this.depName = "Adyen checkout"+payload.checkoutID;
+                    this.generationTime = payload.generationTime;
+                    this.depObj = null;
+                    this.loadMe = true;
+                    this.avoidHead = true;
+                };
+
+                var p = TheClass.prototype = new bfjs.GatewayActor();
+                p.constructor = TheClass;
+
+                TheClass.construct = (function() {
+                    // factory pattern for invoking own constructor with arguments
+                    // basically: return new this(arguments)
+                    
+                    function lambda(args) {
+                        return TheClass.apply(this, args);
+                    }
+                    lambda.prototype = TheClass.prototype;
+
+                    return function() {
+                        return new lambda(arguments);
+                    }
+                })();
+
+                return TheClass;
+            })().construct();
+
+            var adyenLoadedCallback = (function adyenLoadedCallback() {
+                // console.log(arguments);
+                // this.myGateway.handleCheckoutWidgetFetchFinish();
+                // this.myGateway.handleFormFetchBegin();
+            }).bind(this);
+
+            // this.myGateway.handleCheckoutWidgetFetchBegin();
+
+            this.transaction.bfjs.loadScript(payvisionUrl, adyenLoadedCallback, payVisionActor);
+        };
+
+        p.gatewayResponseHandler = function(data) {
+            var self = this;
+
+            var malformedResponse = function(data) {
+                var bfjsError = {
+                    code: 5100,
+                    message: "Card capture to PayVision failed; malformed response.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var parsed;
+            try {
+                parsed = JSON.parse(data);
+            } catch(err) {
+                var bfjsError = {
+                    code: 5101,
+                    message: "Card capture to PayVision failed; malformed response (expected JSON-encoded).",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            }
+
+            var successHandler = function(data) {
+                if (!data.id
+                    || !data.resourcePath) {
+                    return malformedResponse(data);
+                }
+
+                if (data.token === "null") {
+                    var bfjsError = {
+                        code: 5201,
+                        message: "Card capture to PayVision failed; customer aborted token registration.",
+                        detailObj: data
+                    };
+                    return self.ultimateFailure(bfjsError);
+                }
+
+                var payload = {
+                    "@type": 'PayVisionAuthCaptureRequest',
+                    "gateway": "Payvision",
+                    "registrationID": data.id,
+                    "registrationResourcePath": data.resourcePath,
+                    "accountID": self.transaction.accountID
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+
+                // extend cardDetails with late card details, if applicable
+                var lateCardDetails = {};
+                if (self.myGateway.getDeferredCardDetails) {
+                    $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
+                }
+                var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
+            
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    valueFromForm = extendedDetails[i];
+                    switch(i) {
+                        case 'use-as-default-payment-method':
+                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                        break;
+                    }
+                    
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                return self.doAuthCapture(payload);
+            };
+
+            var invalidHandler = function(data) {
+                var reason = data.statusDetail;
+                var bfjsError = {
+                    code: 5010,
+                    message: "Card capture to PayVision failed; card rejected. Reason: '"+reason+"'",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            var errorHandler = function(data) {
+                var bfjsError = {
+                    code: 5020,
+                    message: "Card capture to PayVision failed; error occurred in BillForward server during token verification.",
+                    detailObj: data
+                };
+                return self.ultimateFailure(bfjsError);
+            };
+
+            return successHandler(parsed);
+
+            /*switch(parsed.status) {
+                case 'OK':
+                    return successHandler(parsed);
+                case 'INVALID':
+                    return invalidHandler(parsed);
+                case 'ERROR':
+                    return errorHandler(parsed);
+                default:
+                    return malformedResponse(parsed);
+            }*/
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -2470,7 +2758,8 @@
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
         'sagepay': bfjs.SagePayGateway.construct(),
-        'payvision': bfjs.PayVisionGateway.construct()
+        'payvision': bfjs.PayVisionGateway.construct(),
+        'adyen': bfjs.AdyenGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
@@ -2478,7 +2767,8 @@
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
         'sagepay': bfjs.SagePayTransaction,
-        'payvision': bfjs.PayVisionTransaction
+        'payvision': bfjs.PayVisionTransaction,
+        'adyen': bfjs.AdyenTransaction
     };
 
     bfjs.lateActors = [
@@ -2487,7 +2777,8 @@
         bfjs.gatewayInstances['braintree'],
         bfjs.gatewayInstances['generic'],
         bfjs.gatewayInstances['sagepay'],
-        bfjs.gatewayInstances['payvision']
+        bfjs.gatewayInstances['payvision'],
+        bfjs.gatewayInstances['adyen']
     ];
 
     bfjs.state = {
@@ -2616,7 +2907,10 @@
         }
 
         script.src = url;
-        document.getElementsByTagName("head")[0].appendChild(script);
+        (actor.avoidHead
+        ? document.getElementsByTagName("body")
+        : document.getElementsByTagName("head")
+        )[0].appendChild(script);
     };
 
     bfjs.core.getFormInput = function(key, $formElement) {        
