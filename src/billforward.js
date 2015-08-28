@@ -619,6 +619,7 @@
             switch (jqXHR.status) {
                 case  400:
                 case  500:
+                case  501:
                     if (phase === "pre") {
                         error.code = 2000;
                         error.message = "Preauthorization failed.";
@@ -630,6 +631,7 @@
                                     error.code = 2021;
                                     error.message = "You must first configure your gateway in the BillForward UI.";
                                 }
+                                break;
                             case 'SagePayOperationFailure':
                                 error.code = 2100;
                                 var portions = json.errorMessage.split(" Message was: ");
