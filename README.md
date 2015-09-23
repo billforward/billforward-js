@@ -339,7 +339,7 @@ Client-side tokenization of card with gateway:
   * 3311 ----- Invalid expiry year
   * 3312 ----- Invalid expiry month
     332x --- Invalid Security Code (CVC)
-    3320 ----- (Generic)
+  * 3320 ----- (Generic)
 
 Server-side scrutinization of token from gateway:
     50xx - Verification failed
