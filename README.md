@@ -301,6 +301,7 @@ Connecting to BillForward:
   * 1000 ----- (Generic)
     11xx --- Failure to reach server
   * 1100 ----- (Generic)
+    1101 ----- Protocol not supported by browser
     12xx --- Access denied
     1200 ----- (Generic)
     121x ----- Access token invalid
@@ -331,6 +332,14 @@ Client-side tokenization of card with gateway:
   * 3100 --- (Generic)
     32xx - Received malformed response
   * 3200 --- (Generic)
+    33xx - User input invalid card
+  * 3300 --- (Generic)
+    331x --- Invalid Expiry
+    3310 ----- (Generic)
+  * 3311 ----- Invalid expiry year
+  * 3312 ----- Invalid expiry month
+    332x --- Invalid Security Code (CVC)
+    3320 ----- (Generic)
 
 Server-side scrutinization of token from gateway:
     50xx - Verification failed
