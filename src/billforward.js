@@ -664,9 +664,9 @@
                             case 'StripeOperationFailure':
                                 error.code = 4300;
                                 var portions = json.errorMessage.split(" Message was: ");
-                                error.message = portions[0];
+                                error.message = portions[1];
                                 error.detailObj = {
-                                    'message': portions[1]
+                                    'message': json.errorMessage
                                 };
                                 break;
                             case 'TokenizationAuthCaptureFailure':
