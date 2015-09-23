@@ -2660,26 +2660,21 @@
     var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
         var resolvedGateway = bfjs.resolveGatewayName(targetGateway, cardDetails);
 
-        if (bfjs.core.hasBfCredentials) {
-            if (!bfjs.core.gatewayChosen) {
-                bfjs.loadGateways([resolvedGateway], cardDetails);
-            }
-
-            if (bfjs.core.gatewayChosen){
-                var newTransaction;
-                if (cardDetails) {
-                    newTransaction = bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails);
-                } else {
-                    newTransaction = bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
-                }
-                
-                bfjs.core.doWhenReady(newTransaction);
-            } else {
-                throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
-            }
-        } else {
+        if (!bfjs.core.hasBfCredentials) {
             throw new Error("You need to first call BillForward.useAPI() will BillForward credentials");
         }
+        if (!bfjs.core.gatewayChosen) {
+            bfjs.loadGateways([resolvedGateway], cardDetails);
+        }
+
+        if (!bfjs.core.gatewayChosen) {
+            throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
+        }
+        var newTransaction = cardDetails
+        ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails)
+        : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
+        
+        bfjs.core.doWhenReady(newTransaction);
     };
 
     bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
