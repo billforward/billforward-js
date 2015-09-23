@@ -563,6 +563,14 @@
               * 3100 --- (Generic)
                 32xx - Received malformed response
               * 3200 --- (Generic)
+                33xx - User input invalid card
+              * 3300 --- (Generic)
+                331x --- Invalid Expiry
+                3310 ----- (Generic)
+              * 3311 ----- Invalid expiry year
+              * 3312 ----- Invalid expiry month
+                332x --- Invalid Security Code (CVC)
+                3320 ----- (Generic)
 
             Server-side scrutinization of token from gateway:
                 50xx - Verification failed
@@ -574,6 +582,9 @@
                 51xx - Malformed response from server
               * 5100 --- (Generic)
               * 5101 --- JSON parse error
+                52xx - Token registration aborted
+                5200 --- (Generic)
+              * 5201 --- Aborted by customer
 
             Authorized card capture:
                 4xxx - Card capture failed
@@ -586,9 +597,6 @@
                 4200 ----- (Generic)
                 43xx --- Failure between BillForward server and gateway
               * 4300 ----- (Generic)
-                52xx - Token registration aborted
-                5200 --- (Generic)
-              * 5201 --- Aborted by customer
             */
 
             var error = {
@@ -993,13 +1001,54 @@
             });
         };
 
+        function transformStripeJsErrorToBfjsError(stripeResponse) {
+            var bfjsError = {
+                code: 3000,
+                message: "Card capture failed.",
+                detailObj: stripeResponse
+            };
+
+            // Stripe's error messages are actually very nice
+            // so let's use those
+            // also note that multiple Stripe errors (with differing messages) can share the same code
+            // so again: Stripe's message text is required for the full story.
+            var stripeError = stripeResponse.error;
+            switch(stripeError.type) {
+                case "card_error":
+                switch (stripeError.code) {
+                    case "invalid_expiry_year":
+                    bfjsError.code = 3311;
+                    // bfjsError.message = "Card's expiry year is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    case "invalid_expiry_month":
+                    bfjsError.code = 3312;
+                    // bfjsError.message = "Card's expiry month is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    case "invalid_cvc":
+                    bfjsError.code = 3320;
+                    // bfjsError.message = "Card's Security code (CVC) is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    default:
+                    bfjsError.code = 3300;
+                    bfjsError.message = stripeError.message;
+                }
+                break;
+                default:
+                // we've no knowledge of any other type of error than card_error
+                // however, their message will likely still be better than our generic apology.
+                bfjsError.message = stripeError.message;
+            }
+
+            return bfjsError;
+        }
+
         p.gatewayResponseHandler = function(status, response) {
             if (response.error) {
-                var bfjsError = {
-                    code: 3000,
-                    message: "Card capture to Stripe failed.",
-                    detailObj: response
-                };
+                var bfjsError = transformStripeJsErrorToBfjsError(response)
+
                 // Show the errors on the form
                 this.ultimateFailure(bfjsError);
             } else {
