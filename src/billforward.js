@@ -1259,7 +1259,7 @@
                     var self = this;
 
                     var onPaymentMethodReceived = function(obj) {
-                        self.myGateway.onPaymentMethodReceived();
+                        self.myGateway.onPaymentMethodReceived.apply(this, arguments);
                     };
 
                     function handlePayPalLoaded(e) {
