@@ -438,6 +438,59 @@ BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, cal
 
 Note that only the custom form invocation (`captureCardOnSubmit()`) supports this.
 
+#####Callbacks
+
+We allow you to pass through various config and callbacks to Braintree's SDK:
+
+```js
+// some <div/> or similar that you have reserved for throwing the PayPal button into.
+var paypalButtonContainer = '#paypalButtonContainer';
+
+/*
+  This is equivalent to the Braintreee SDK's `onPaymentMethodReceived`. You don't necessarily need to do anything in response to this event (BillForward.js handles the flow for you anyway).
+  https://developers.braintreepayments.com/javascript+ruby/guides/paypal/client-side
+ */
+function onPaymentMethodReceived(object) { }
+
+// this callback lets you know "A PayPal button is being grabbed"; you might want to display a spinner
+function handlePayPalFetchBegin() {
+  // if you want seamless loading, you can hide the PayPal button container, so it's invisible until it's fully loaded
+  $(paypalButtonContainer).hide();
+}
+
+// this callback lets you know "The PayPal button has arrived and is ready for interaction (but image is still loading)"; you could unhide the button now, and remove your spinner.
+function handlePayPalReady() { }
+
+// this callback lets you know "The PayPal button is ready for interaction AND its image has finished loading"; you could unhide the button now, and remove your spinner.
+function handlePayPalLoaded() {
+  $(paypalButtonContainer).show();
+}
+
+/*
+  https://developers.braintreepayments.com/javascript+php/guides/paypal/client-side
+  Anything you throw in here will be added to the Options object with which we invoke Braintree SDK's braintree.setup()
+*/
+var braintreeOptionsObj = {
+  // A callback function that is fired for any error that can occur during the PayPal flow (e.g., if the customer’s browser does not support the Checkout with PayPal experience)
+  onUnsupported: function() { },
+
+  // A callback function, which is fired if the customer cancels or logs out without completing PayPal authentication.
+  onCancelled: function() { },
+
+  // Use this option to change the language, links, and terminology used in the PayPal flow to suit the country and language of your customer
+  locale: "GB"
+};
+
+// Jquery-style selector pointing to your form
+var formSelector = '#payment-form';
+
+// Jquery-style selector pointing to your PayPal button container
+BillForward.addPayPalButton(paypalButtonContainer, onPaymentMethodReceived, handlePayPalFetchBegin, handlePayPalReady, handlePayPalLoaded, braintreeOptionsObj);
+
+// bind to 'submit' event the 'card capture' routine
+BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, callback);
+```
+
 ####SagePay
 SagePay is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
 

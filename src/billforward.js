@@ -162,6 +162,7 @@
             this.handlePayPalReady = function() { return; };
             this.handlePayPalLoaded = function() { return; };
             this.onPaymentMethodReceived = function() { return; };
+            this.braintreeOptionsObj = {};
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -1258,8 +1259,8 @@
 
                     var self = this;
 
-                    var onPaymentMethodReceived = function(obj) {
-                        self.myGateway.onPaymentMethodReceived.apply(this, arguments);
+                    var onPaymentMethodReceived = function() {
+                        self.myGateway.onPaymentMethodReceived.apply(self.myGateway.onPaymentMethodReceived, arguments);
                     };
 
                     function handlePayPalLoaded(e) {
@@ -1291,7 +1292,7 @@
 
                     self.myGateway.handlePayPalFetchBegin();
 
-                    this.myGateway.depObj.setup(clientToken, "paypal", {
+                    var nominalBraintreeInputs = {
                         container: paypalDivId,
                         singleUse: false,
                         onPaymentMethodReceived: onPaymentMethodReceived
@@ -1317,7 +1318,11 @@
 
                             self.doSubmitDanceWhenReady(disableForm, undisableForm);
                         }*/
-                    });
+                    };
+
+                    var qualifiedBraintreeInputs = $.extend({}, self.myGateway.braintreeOptionsObj, nominalBraintreeInputs);
+
+                    this.myGateway.depObj.setup(clientToken, "paypal", qualifiedBraintreeInputs);
                     BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
                 //this.myGateway.depObj.setup(clientToken, "custom", {id: formId});
@@ -2741,7 +2746,7 @@
         bfjs.core.hasBfCredentials = true;
     };
 
-    bfjs.addPayPalButton = function(selector, onPaymentMethodReceived, handlePayPalFetchBegin, handlePayPalReady, handlePayPalLoaded) {
+    bfjs.addPayPalButton = function(selector, onPaymentMethodReceived, handlePayPalFetchBegin, handlePayPalReady, handlePayPalLoaded, braintreeOptionsObj) {
         // supported for Braintree only
         bfjs.gatewayInstances['braintree'].usePaypal = true;
         bfjs.gatewayInstances['braintree'].paypalButtonSelector = selector;
@@ -2749,6 +2754,7 @@
         bfjs.gatewayInstances['braintree'].handlePayPalFetchBegin = handlePayPalFetchBegin || function() { };
         bfjs.gatewayInstances['braintree'].handlePayPalReady = handlePayPalReady || function() { };
         bfjs.gatewayInstances['braintree'].handlePayPalLoaded = handlePayPalLoaded || function() { };
+        bfjs.gatewayInstances['braintree'].braintreeOptionsObj = braintreeOptionsObj || {};
     };
 
     bfjs.addSagePayForm = function(selector, options, getDeferredCardDetails, handleIFrameFetchBegin, handleIFrameReady, handleIFrameLoaded) {
