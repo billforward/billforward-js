@@ -1,0 +1,25 @@
+{
+  "name": "billforward-js",
+  "version": "1.0.0",
+  "description": "BillForward.js client for easy, gateway-agnostic card tokenization",
+  "main": "src/index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/billforward/billforward-js.git"
+  },
+  "keywords": [
+    "billforward"
+  ],
+  "author": "BillForward <support@billforward.net>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/billforward/billforward-js/issues"
+  },
+  "homepage": "https://github.com/billforward/billforward-js#readme"
+}
