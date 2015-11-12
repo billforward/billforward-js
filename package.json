@@ -2,7 +2,7 @@
   "name": "billforward-js",
   "version": "1.0.0",
   "description": "BillForward.js client for easy, gateway-agnostic card tokenization",
-  "main": "src/index.js",
+  "main": "src/billforward.js",
   "directories": {
     "example": "examples"
   },
