@@ -17,7 +17,7 @@ BillForward.js presents a generic interface in code for:
 
 The code you write is the same, regardless of payment gateway. This makes it trivial to use certain gateways for certain types of card.
 
-###Supported gateways
+# Supported gateways
 Currently supported:
 
 - `stripe`
@@ -26,15 +26,16 @@ Currently supported:
 - `sagepay`
 - `payvision`
 
-###Include
-####Easy mode
+# Usage
+## Inclusion
+### Easy mode
 Embed BillForward.js into your page:
 
 ```html
 <script type="text/javascript" src="lib/billforward-js/src/billforward.js"></script>
 ```
 
-####RequireJS
+### RequireJS
 You can shim us into your require-config.js:
 
 ```js
@@ -61,7 +62,15 @@ define([
 });
 ```
 
-###Initialize
+### Browserify (via npm)
+
+Note that this is a client-side library, so the `npm` distribution does not imply Node support. You can install this package from `npm` for use with [Browserify](http://browserify.org/), like so:
+
+```bash
+npm install --save billforward-js
+```
+
+## Initialization
 
 Generate a [public token](https://app-sandbox.billforward.net/#/setup/personal/api-keys).
 
@@ -75,37 +84,45 @@ Give BillForward.js credentials to connect to server:
 </script>
 ```
 
-###Present form
+## Invocation
+
+Now that you have included the library, and informed it of your BillForward credentials, you can invoke BillForward.js.
+
+### Card capture using form
+
+You will need to build a card capture form inside your webpage.
+
+#### Building form in webpage
 Make a credit card form:
 
 ```html
 <form id="payment-form">
-	<span class="payment-errors"></span>
+  <span class="payment-errors"></span>
 
-	<div class="form-row">
-		<label>
-			<span>Card Number</span>
-			<input type="text" size="20" bf-data="number" value="4242424242424242"/>
-		</label>
-	</div>
+  <div class="form-row">
+    <label>
+      <span>Card Number</span>
+      <input type="text" size="20" bf-data="number" value="4242424242424242"/>
+    </label>
+  </div>
 
-	<div class="form-row">
-		<label>
-			<span>CVC</span>
-			<input type="text" size="4" bf-data="cvc" value="123"/>
-		</label>
-	</div>
+  <div class="form-row">
+    <label>
+      <span>CVC</span>
+      <input type="text" size="4" bf-data="cvc" value="123"/>
+    </label>
+  </div>
 
-	<div class="form-row">
-		<label>
-			<span>Expiration (MM/YYYY)</span>
-			<input type="text" size="2" bf-data="exp-month" value="01"/>
-		</label>
-		<span> / </span>
-		<input type="text" size="4" bf-data="exp-year" value="2016"/>
-	</div>
+  <div class="form-row">
+    <label>
+      <span>Expiration (MM/YYYY)</span>
+      <input type="text" size="2" bf-data="exp-month" value="01"/>
+    </label>
+    <span> / </span>
+    <input type="text" size="4" bf-data="exp-year" value="2016"/>
+  </div>
 
-	<button type="submit" disabled="true">Submit Payment</button>
+  <button type="submit" disabled="true">Submit Payment</button>
 </form>
 ```
 
@@ -113,33 +130,33 @@ Note that the 'submit' button is set to `disabled="true"`; BillForward.js will e
 
 `bf-data` attributes are used to signify which form elements are to be used in the tokenization. We capture all provided `bf-data` attributes, and pass on to the gateway any of these attributes that it supports.
 
-####Form attributes
+#### Form attributes
 Here is the current list of `bf-data` attributes:
 
 ```
 cardholder-name
 cvc
 number
-exp-month						// in the format '01'
-exp-year						// in the format '2016'
-exp-date						// in the format '01/2016'
+exp-month           // in the format '01'
+exp-year            // in the format '2016'
+exp-date            // in the format '01/2016'
 address-line1
 address-line2
 address-city
-address-province				// use this for 'state' in America
+address-province        // use this for 'state' in America
 address-zip
-address-country					// in the format 'United Kingdom'
+address-country         // in the format 'United Kingdom'
 name-first
 name-last
 company-name
 phone-mobile
 email
-use-as-default-payment-method	// defaults to "false"; set to string "true"
+use-as-default-payment-method // defaults to "false"; set to string "true"
 ```
 
 All are assumed to be the String datatype.
 
-#####Dates
+##### Dates
 `exp-month` is formatted MM. 
 `exp-year` is formatted YYYY. 
 `exp-date` is formatted MM/YYYY. 
@@ -157,7 +174,7 @@ All are assumed to be the String datatype.
 
 In other words: where `exp-date` is present, it becomes authoritative.
 
-#####Names
+##### Names
 `cardholder-name` interacts with `name-first` and `name-last` in the following way:
 
 - If only `cardholder-name` is provided:
@@ -174,10 +191,9 @@ In other words: where `exp-date` is present, it becomes authoritative.
  * BillForward Profile will be named using `name-first` and `name-last`.
 
 In other words: where `cardholder-name` is present, it becomes authoritative; `name-first` and `name-last` are then used only as BillForward profile metadata. 
-When `cardholder-name` is absent, `name-first` and `name-last` are authoritative. 
+When `cardholder-name` is absent, `name-first` and `name-last` are authoritative.
 
-###Invoke card capture
-You can now invoke BillForward.js.
+### Binding card capture code to form
 
 Specify a JQuery selector that can be used to locate your form.
 
@@ -197,7 +213,7 @@ BillForward.js binds a function to the 'submit' event of that form. The function
 
 This is the simplest invocation. More likely you will use these alternative invocations, for example to handle the result:
 
-####Capture payment method to existing BillForward account
+#### Capture payment method to existing BillForward account
 It's possible this is a returning customer, or you have already set up some account for them in BillForward. Providing their account ID enables BillForward.js to add the payment method to that existing account:
 
 ```js
@@ -207,7 +223,7 @@ var accountID = '74DA7D63-EAEB-431B-9745-76F9109FD842';
 BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
-####Capture payment method to new BillForward account
+#### Capture payment method to new BillForward account
 Perhaps the customer is a new customer, or you have not yet set up an account for them in BillForward.
 
 Provide a `null` account ID, and the default action will occur: BillForward.js creates automatically a new account, and attaches the created payment method to that account.
@@ -219,7 +235,7 @@ var accountID = null;
 BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
-####Handle success/failure
+#### Handle success/failure
 Naturally you will want to know when the transaction is finished, so your customer can progress through the checkout.
 
 Pass in a callback function to handle the result:
@@ -259,8 +275,8 @@ The returned object in the event of success is a JSON representation of a BillFo
 
 From this object you can look up the `accountID` of the created/existing account. You might want to pass this on to your backend if you intend to do handle this data further.
 
-#####Complex handling of response
-######Failure
+##### Complex handling of response
+###### Failure
 You can present the error in the form (for example using JQuery) and re-enable the form 'submit' button:
 
 ```js
@@ -369,7 +385,7 @@ Authorized card capture:
 ```
 
 
-######Success
+###### Success
 Upon success, you could POST some information to your backend.
 
 For example, if a new account is created, you might want to send its ID to your server.
@@ -398,7 +414,7 @@ function callback(data, error) {
 };
 ```
 
-###Capture without form
+### Capture without form
 We provide an alternative invocation, allowing you to capture a card programmatically rather than using a form:
 
 ```js
@@ -415,8 +431,8 @@ BillForward.captureCard(cardDetails, 'stripe', accountID, callback);
 
 Each entry in the cardDetails object is equivalent to passing in a `bf-data` attribute of the same name.
 
-###Gateway-specific invocation
-####PayPal (via Braintree)
+### Gateway-specific invocation
+#### PayPal (via Braintree)
 You can add a (hosted) PayPal button to a custom Braintree form. It will be downloaded and dropped into an HTML node of your choice:
 
 ```html
@@ -438,7 +454,7 @@ BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, cal
 
 Note that only the custom form invocation (`captureCardOnSubmit()`) supports this.
 
-#####Callbacks
+##### Callbacks
 
 We allow you to pass through various config and callbacks to Braintree's SDK:
 
@@ -491,7 +507,7 @@ BillForward.addPayPalButton(paypalButtonContainer, onPaymentMethodReceived, hand
 BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, callback);
 ```
 
-####SagePay
+#### SagePay
 SagePay is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
 
 ```html
@@ -526,7 +542,7 @@ var cardDetails = {
 
 The BillForward UI gives you the opportunity to specify which types of card you wish to accept through SagePay (using a multi-select).
 
-####PayVision
+#### PayVision
 
 PayVision is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
 
@@ -630,5 +646,18 @@ var callbacks = {
 BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, callbacks);
 ```
 
-###Example checkout
+### Example checkout
 See the 'examples' folder for examples of full worked checkouts.
+
+# Development
+## Releases
+### `npm`
+Finish your commit, then run:
+
+```bash
+npm version patch
+npm publish
+git push origin master --follow-tags
+```
+
+Or you know, run `sh ./npm-release.sh`
