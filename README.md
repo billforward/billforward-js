@@ -27,8 +27,11 @@ Currently supported:
 - `payvision`
 
 # Usage
+
 ## Inclusion
+
 ### Easy mode
+
 Embed BillForward.js into your page:
 
 ```html
@@ -36,6 +39,7 @@ Embed BillForward.js into your page:
 ```
 
 ### RequireJS
+
 You can shim us into your require-config.js:
 
 ```js
@@ -157,6 +161,7 @@ use-as-default-payment-method // defaults to "false"; set to string "true"
 All are assumed to be the String datatype.
 
 ##### Dates
+
 `exp-month` is formatted MM. 
 `exp-year` is formatted YYYY. 
 `exp-date` is formatted MM/YYYY. 
@@ -175,20 +180,21 @@ All are assumed to be the String datatype.
 In other words: where `exp-date` is present, it becomes authoritative.
 
 ##### Names
+
 `cardholder-name` interacts with `name-first` and `name-last` in the following way:
 
 - If only `cardholder-name` is provided:
- * Gateways that require a full name will use `cardholder-name`.
- * Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
- * BillForward Profile will use the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+  - Gateways that require a full name will use `cardholder-name`.
+  - Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+  - BillForward Profile will use the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
 - If `cardholder-name`, `name-first` and `name-last` are all provided:
- * Gateways that require a full name will use `cardholder-name`.
- * Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
- * BillForward Profile will be named using `name-first` and `name-last`.
+  - Gateways that require a full name will use `cardholder-name`.
+  - Gateways that require a first/last name split will receive the final word of `cardholder-name` as 'last name', and the rest as 'first name'.
+  - BillForward Profile will be named using `name-first` and `name-last`.
 - If only `name-first` and `name-last` are provided:
- * Gateways that require a full name will use a space-concatenation of `name-first` and `name-last`.
- * Gateways that require a first/last name split will receive `name-first` and `name-last`.
- * BillForward Profile will be named using `name-first` and `name-last`.
+  - Gateways that require a full name will use a space-concatenation of `name-first` and `name-last`.
+  - Gateways that require a first/last name split will receive `name-first` and `name-last`.
+  - BillForward Profile will be named using `name-first` and `name-last`.
 
 In other words: where `cardholder-name` is present, it becomes authoritative; `name-first` and `name-last` are then used only as BillForward profile metadata. 
 When `cardholder-name` is absent, `name-first` and `name-last` are authoritative.
@@ -214,6 +220,7 @@ BillForward.js binds a function to the 'submit' event of that form. The function
 This is the simplest invocation. More likely you will use these alternative invocations, for example to handle the result:
 
 #### Capture payment method to existing BillForward account
+
 It's possible this is a returning customer, or you have already set up some account for them in BillForward. Providing their account ID enables BillForward.js to add the payment method to that existing account:
 
 ```js
@@ -224,6 +231,7 @@ BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
 #### Capture payment method to new BillForward account
+
 Perhaps the customer is a new customer, or you have not yet set up an account for them in BillForward.
 
 Provide a `null` account ID, and the default action will occur: BillForward.js creates automatically a new account, and attaches the created payment method to that account.
@@ -236,6 +244,7 @@ BillForward.captureCardOnSubmit(formSelector, targetGateway, accountID);
 ```
 
 #### Handle success/failure
+
 Naturally you will want to know when the transaction is finished, so your customer can progress through the checkout.
 
 Pass in a callback function to handle the result:
@@ -276,7 +285,9 @@ The returned object in the event of success is a JSON representation of a BillFo
 From this object you can look up the `accountID` of the created/existing account. You might want to pass this on to your backend if you intend to do handle this data further.
 
 ##### Complex handling of response
+
 ###### Failure
+
 You can present the error in the form (for example using JQuery) and re-enable the form 'submit' button:
 
 ```js
@@ -386,6 +397,7 @@ Authorized card capture:
 
 
 ###### Success
+
 Upon success, you could POST some information to your backend.
 
 For example, if a new account is created, you might want to send its ID to your server.
@@ -415,6 +427,7 @@ function callback(data, error) {
 ```
 
 ### Capture without form
+
 We provide an alternative invocation, allowing you to capture a card programmatically rather than using a form:
 
 ```js
@@ -432,7 +445,9 @@ BillForward.captureCard(cardDetails, 'stripe', accountID, callback);
 Each entry in the cardDetails object is equivalent to passing in a `bf-data` attribute of the same name.
 
 ### Gateway-specific invocation
+
 #### PayPal (via Braintree)
+
 You can add a (hosted) PayPal button to a custom Braintree form. It will be downloaded and dropped into an HTML node of your choice:
 
 ```html
@@ -508,6 +523,7 @@ BillForward.captureCardOnSubmit(formSelector, 'braintree+paypal', accountID, cal
 ```
 
 #### SagePay
+
 SagePay is available as a hosted form only. It will be downloaded and dropped into an HTML node of your choice:
 
 ```html
@@ -647,11 +663,15 @@ BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, cal
 ```
 
 ### Example checkout
+
 See the 'examples' folder for examples of full worked checkouts.
 
 # Development
+
 ## Releases
+
 ### `npm`
+
 Finish your commit, then run:
 
 ```bash
