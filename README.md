@@ -40,23 +40,45 @@ Embed BillForward.js into your page:
 
 ### RequireJS
 
-You can shim us into your require-config.js:
+First, include BillForwardJS in your `require-config.js`:
+
+#### Inclusion
+
+##### Using AMD module loading
+
+Just point to `billforward.js`; we are an AMD module, so this is all RequireJS should require:
 
 ```js
 require.config({
 	paths: {
 		"BillForward": "/path/to/billforward", // billforward.js location
-	},
-	shim: {
-		"BillForward": {
-	    	deps: ["jQuery"], // you don't have to declare a dependency on JQuery (BFJS can look for window.jQuery at runtime), but it helps
-	    	exports: 'BillForward' // we set window.BillForward, so shim should look for this
-	    }
 	}
 });
 ```
 
-Then your RequireJS module can access us like so:
+##### Using shim from global namespace
+
+If for any reason you prefer to grab us from the global variable `window.BillForward` instead of grabbing us via our AMD module definition, you can use RequireJS's shims to grab our namespace.
+
+You can shim us into your `require-config.js`:
+
+```js
+require.config({
+  paths: {
+    "BillForward": "/path/to/billforward", // billforward.js location
+  },
+  shim: {
+    "BillForward": {
+        deps: ["jQuery"], // you don't have to declare a dependency on JQuery (BFJS can look for window.jQuery at runtime), but it helps
+        exports: 'BillForward' // we set window.BillForward, so shim should look for this
+      }
+  }
+});
+```
+
+#### Grabbing a reference to BillForward.js
+
+Once included, your RequireJS module can access us like so:
 
 ```js
 define([
