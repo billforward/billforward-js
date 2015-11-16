@@ -2874,5 +2874,13 @@
         }
     };
 
-    window.BillForward = window.BillForward || bfjs;
+    if (typeof define === 'function' && define.amd) {
+        define([], function() {
+            return bfjs;
+        });
+    } else if (typeof exports !== 'undefined') {
+        module.exports = bfjs;
+    } else {
+        window.BillForward = window.BillForward || bfjs;
+    }
 })();
