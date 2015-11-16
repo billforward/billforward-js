@@ -2876,6 +2876,7 @@
 
     if (typeof define === 'function' && define.amd) {
         define([], function() {
+            window.BillForward = window.BillForward || bfjs;
             return bfjs;
         });
     } else if (typeof exports !== 'undefined') {
