@@ -672,6 +672,8 @@ See the 'examples' folder for examples of full worked checkouts.
 
 ### `npm`
 
+#### Minor release
+
 Finish your commit, then run:
 
 ```bash
@@ -680,4 +682,16 @@ npm publish
 git push origin master --follow-tags
 ```
 
-Or you know, run `sh ./npm-release.sh`
+Or run `sh ./npm-release-minor.sh`
+
+#### Major release
+
+Finish your commit, then run:
+
+```bash
+npm version major
+npm publish
+git push origin master --follow-tags
+```
+
+Or run `sh ./npm-release-major.sh`
