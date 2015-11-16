@@ -1,18 +1,20 @@
-(function bfjsUmdLoader(root, factory) {
+(function bfjsUmdLoader(root, factory) {    
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
-        define(['exports'], function billforwardjsAmdModule(exports) {
+        define([], function billforwardjsAmdModule() {
             // Also create a global in case some scripts
             // that are loaded still are looking for
             // a global even when an AMD loader is in use.
-            factory((root.commonJsStrictGlobal = exports));
+            var bfjs = factory();
+            root.BillForward = root.BillForward || bfjs;
+            return bfjs;
         });
-    } else if (typeof exports === 'object' && typeof exports.nodeName !== 'string') {
-        // CommonJS
-        factory(exports);
+    } else if (typeof exports !== 'undefined') {
+        // Node
+        module.exports = factory();
     } else {
         // Browser globals
-        root.BillForward = factory((root.commonJsStrictGlobal = {}));
+        root.BillForward = root.BillForward || factory();
     }
 }(this, function billforwardjsFactory(exports) {
     var bfjs = {};
@@ -2890,51 +2892,5 @@
         }
     };
 
-    // From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys
-    var getObjKeys = Object.keys
-    ? Object.keys
-    : (function () {
-        'use strict';
-        var hasOwnProperty = Object.prototype.hasOwnProperty,
-            hasDontEnumBug = !({toString: null}).propertyIsEnumerable('toString'),
-            dontEnums = [
-              'toString',
-              'toLocaleString',
-              'valueOf',
-              'hasOwnProperty',
-              'isPrototypeOf',
-              'propertyIsEnumerable',
-              'constructor'
-            ],
-            dontEnumsLength = dontEnums.length;
-
-        return function (obj) {
-          if (typeof obj !== 'object' && (typeof obj !== 'function' || obj === null)) {
-            throw new TypeError('Object.keys called on non-object');
-          }
-
-          var result = [], prop, i;
-
-          for (prop in obj) {
-            if (hasOwnProperty.call(obj, prop)) {
-              result.push(prop);
-            }
-          }
-
-          if (hasDontEnumBug) {
-            for (i = 0; i < dontEnumsLength; i++) {
-              if (hasOwnProperty.call(obj, dontEnums[i])) {
-                result.push(dontEnums[i]);
-              }
-            }
-          }
-          return result;
-        };
-      }());
-
-    var bfjsKeys = getObjKeys(bfjs);
-    for (var iterand = 0; iterand < bfjsKeys.length; iterand++) {
-        var currentBfjsKey = bfjsKeys[iterand];
-        exports[currentBfjsKey] = bfjs[currentBfjsKey];
-    }
+    return bfjs;
 }));
