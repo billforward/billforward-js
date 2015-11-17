@@ -1,47 +1,4 @@
-;(function() {
-/**
-* Module loading copied from `lodash` (https://lodash.com/)
-* lodash is Copyright 2012-2015 The Dojo Foundation <http://dojofoundation.org/>:
-* Available under MIT license <https://lodash.com/license>
-*/
-  /** Used to determine if values are of the language type `Object`. */
-  var objectTypes = {
-    'function': true,
-    'object': true
-  };
-
-  /** Used as a safe reference for `undefined` in pre-ES5 environments. */
-  var undefined;
-
-  /** Detect free variable `exports`. */
-  var freeExports = objectTypes[typeof exports] && exports && !exports.nodeType && exports;
-
-  /** Detect free variable `module`. */
-  var freeModule = objectTypes[typeof module] && module && !module.nodeType && module;
-
-  /** Detect free variable `global` from Node.js. */
-  var freeGlobal = freeExports && freeModule && typeof global == 'object' && global && global.Object && global;
-
-  /** Detect free variable `self`. */
-  var freeSelf = objectTypes[typeof self] && self && self.Object && self;
-
-  /** Detect free variable `window`. */
-  var freeWindow = objectTypes[typeof window] && window && window.Object && window;
-
-  /** Detect the popular CommonJS extension `module.exports`. */
-  var moduleExports = freeModule && freeModule.exports === freeExports && freeExports;
-
-  /**
-   * Used as a reference to the global object.
-   *
-   * The `this` value is used if it's the global object to avoid Greasemonkey's
-   * restricted `window` object, otherwise the `window` object is used.
-   */
-  var root = freeGlobal || ((freeWindow !== (this && this.window)) && freeWindow) || freeSelf || this;
-
-  /*--------------------------------------------------------------------------*/
-
-  function bfjsFactory() {
+(function() {
     var bfjs = {};
 
     bfjs.LateActor = (function() {
@@ -2917,39 +2874,14 @@
         }
     };
 
-    return bfjs;
-  }
-
-  /*--------------------------------------------------------------------------*/
-
-  // Export bfjs.
-  var BillForward = bfjsFactory();
-
-  // Some AMD build optimizers like r.js check for condition patterns like the following:
-  if (typeof define == 'function' && typeof define.amd == 'object' && define.amd) {
-    // Expose bfjs to the global object when an AMD loader is present to avoid
-    // errors in cases where bfjs is loaded by a script tag and not intended
-    // as an AMD module. See http://requirejs.org/docs/errors.html#mismatch for
-    // more details.
-    root.BillForward = BillForward;
-
-    define(function amdModuleLoaderBfjs() {
-      return BillForward;
-    });
-  }
-  // Check for `exports` after `define` in case a build optimizer adds an `exports` object.
-  else if (freeExports && freeModule) {
-    // Export for Node.js or RingoJS.
-    if (moduleExports) {
-      (freeModule.exports = BillForward).BillForward = BillForward;
+    if (typeof define === 'function' && define.amd) {
+        define([], function() {
+            window.BillForward = window.BillForward || bfjs;
+            return bfjs;
+        });
+    } else if (typeof exports !== 'undefined') {
+        module.exports = bfjs;
+    } else {
+        window.BillForward = window.BillForward || bfjs;
     }
-    // Export for Rhino with CommonJS support.
-    else {
-      freeExports.BillForward = BillForward;
-    }
-  }
-  else {
-    // Export for a browser or Rhino.
-    root.BillForward = BillForward;
-  }
-}.call(this));
+})();
