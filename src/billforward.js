@@ -2875,7 +2875,7 @@
     };
 
     if (typeof define === 'function' && define.amd) {
-        define([], function() {
+        define('bfjs', [], function() {
             window.BillForward = window.BillForward || bfjs;
             return bfjs;
         });

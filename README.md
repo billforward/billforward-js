@@ -51,7 +51,7 @@ Just point to `billforward.js`; we are an AMD module, so this is all RequireJS s
 ```js
 require.config({
 	paths: {
-		"BillForward": "/path/to/billforward", // billforward.js location
+		"bfjs": "/path/to/billforward", // billforward.js location
 	}
 });
 ```
@@ -65,10 +65,10 @@ You can shim us into your `require-config.js`:
 ```js
 require.config({
   paths: {
-    "BillForward": "/path/to/billforward", // billforward.js location
+    "bfjs": "/path/to/billforward", // billforward.js location
   },
   shim: {
-    "BillForward": {
+    "bfjs": {
         deps: ["jQuery"], // you don't have to declare a dependency on JQuery (BFJS can look for window.jQuery at runtime), but it helps
         exports: 'BillForward' // we set window.BillForward, so shim should look for this
       }
@@ -82,7 +82,7 @@ Once included, your RequireJS module can access us like so:
 
 ```js
 define([
-  "BillForward",
+  "bfjs",
 ], function (BillForward) {
 	console.log(BillForward); // it's here; honest!
 });
