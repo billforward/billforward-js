@@ -2715,7 +2715,7 @@
         var resolvedGateway = bfjs.resolveGatewayName(targetGateway, cardDetails);
 
         if (!bfjs.core.hasBfCredentials) {
-            throw new Error("You need to first call BillForward.useAPI() will BillForward credentials");
+            throw new Error("You need to first call BillForward.useAPI() with BillForward credentials");
         }
         if (!bfjs.core.gatewayChosen) {
             bfjs.loadGateways([resolvedGateway], cardDetails);
@@ -2735,7 +2735,15 @@
         return invoke(formElementSelector, null, targetGateway, accountID, callback);
     };
 
+    bfjs.captureBankAccountOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
+        return invoke(formElementSelector, null, targetGateway, accountID, callback);
+    };
+
     bfjs.captureCard = function(cardDetails, targetGateway, accountID, callback) {
+        return invoke(null, cardDetails, targetGateway, accountID, callback);
+    };
+
+    bfjs.captureBankAccount = function(cardDetails, targetGateway, accountID, callback) {
         return invoke(null, cardDetails, targetGateway, accountID, callback);
     };
 

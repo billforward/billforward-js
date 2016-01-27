@@ -1,3 +1,5 @@
 
 scratch.html
 *.scratch.html
+.idea
+*.iml
