@@ -133,13 +133,43 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
             lambda.prototype = TheClass.prototype;
 
             return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
+    bfjs.StripeAchGateway = (function () {
+        var TheClass = function () {
+            // statics
+            this.key = 'stripeach';
+            this.depName = "StripeACH";
+            this.depObj = null;
+            this.requireShim = {};
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function () {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+
+            lambda.prototype = TheClass.prototype;
+
+            return function () {
                 return new lambda(arguments);
             }
         })();
@@ -719,6 +749,12 @@
                     }
             }
 
+            // TODO: should move this server side
+            if(phase && phase == "other") {
+                error.code = 4000;
+                error.message = jqXHR.responseJSON.errorMessage;
+            }
+
             return error;
         };
 
@@ -1097,6 +1133,71 @@
 
         return TheClass;
     })();
+
+
+    bfjs.StripeAchTransaction = (function () {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function () {
+            _parent.apply(this, arguments);
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function () {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+
+            lambda.prototype = TheClass.prototype;
+
+            return function () {
+                return new lambda(arguments);
+            }
+        })();
+
+        p.doSubmitDanceWhenReady = function () {
+            var self = this;
+
+            var $form = $(self.transaction.formElementCandidate);
+
+            var payload = {
+                routingNumber: bfjs.core.getFormValue("routingNumber", $form),
+                accountNumber: bfjs.core.getFormValue("accountNumber", $form),
+                stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
+                holderName: bfjs.core.getFormValue("holderName", $form),
+                bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
+                accountID: bfjs.core.getFormValue("accountID", $form),
+                organizationID: self.transaction.bfjs.state.api.organizationID
+            };
+
+            console.log(payload);
+
+            $.ajax(self.buildBFAjax(payload, "stripe-ach"))
+                .done(function (resp, msg, err) {
+                    self.transaction.callback(
+                        resp.results[0],
+                        null
+                    );
+                })
+                .fail(function (resp, msg, err) {
+                    self.transaction.callback(
+                        resp.responseJSON,
+                        self.jqXHRErrorToBFJSError(resp, msg, err, "other")
+                    );
+                })
+                .always(function() {
+                    $form.find("button[type=submit]").prop("disabled", false);
+                });
+        };
+
+        return TheClass;
+    })();
+
 
     bfjs.BraintreeTransaction = (function() {
         var _parent = bfjs.GatewayTransaction;
@@ -2523,6 +2624,7 @@
 
     bfjs.gatewayInstances = {
         'stripe': bfjs.StripeGateway.construct(),
+        'stripeach': bfjs.StripeAchGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
         'sagepay': bfjs.SagePayGateway.construct(),
@@ -2531,6 +2633,7 @@
 
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
+        'stripeach': bfjs.StripeAchTransaction,
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
         'sagepay': bfjs.SagePayTransaction,
@@ -2736,6 +2839,13 @@
     };
 
     bfjs.captureBankAccountOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
+        if (targetGateway != "stripe") {
+            throw "'" + targetGateway + "' gateway does not support bank accounts";
+        } else {
+            // We are masking the stripe ach gateway as a plain stripe one
+            targetGateway = "stripeach";
+        }
+
         return invoke(formElementSelector, null, targetGateway, accountID, callback);
     };
 
@@ -2744,6 +2854,13 @@
     };
 
     bfjs.captureBankAccount = function(cardDetails, targetGateway, accountID, callback) {
+        if (targetGateway != "stripe") {
+            throw "'" + targetGateway + "' gateway does not support bank accounts";
+        } else {
+            // We are masking the stripe ach gateway as a plain stripe one
+            targetGateway = "stripeach";
+        }
+
         return invoke(null, cardDetails, targetGateway, accountID, callback);
     };
 
@@ -2865,6 +2982,7 @@
             var resolvedName = bfjs.resolveGatewayName(gateway, cardDetails);
             switch(gateway.toLowerCase()) {
                 case 'stripe':
+                case 'stripeach':
                 case 'braintree':
                 case 'generic':
                 case 'sagepay':

@@ -1,93 +1,100 @@
 <html>
-	<head>
-		<!-- Include JQuery (optional; useful for handling the form in callback) -->
-		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<head>
+    <!-- Include JQuery (optional; useful for handling the form in callback) -->
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 
-		<!-- Include BillForwardJS -->
-		<script type="text/javascript" src="../src/billforward.js"></script>
+    <!-- Include BillForwardJS -->
+    <script type="text/javascript" src="../src/billforward.js"></script>
 
-		<script type="text/javascript">
-			var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
-			var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
+    <script type="text/javascript">
+        var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
+        var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
 
-			// connect to BillForward using credentials
-			BillForward.useAPI(bfAPIURL, bfAPIKey);
+        // connect to BillForward using credentials
+        BillForward.useAPI(bfAPIURL, bfAPIKey);
 
-			// use a 'null' account if you want to capture this card against a new customer
-			var accountID = null;
+        // use a 'null' account if you want to capture this card against a new customer
+        var accountID = null;
 
-			// Jquery-style selector pointing to your form
-			var formSelector = '#payment-form';
+        // Jquery-style selector pointing to your form
+        var formSelector = '#payment-form';
 
-			BillForward.captureCardOnSubmit(formSelector, 'stripe', accountID, callback);
+        BillForward.captureBankAccountOnSubmit(formSelector, 'stripe', accountID, callback);
 
-			function callback(paymentMethod, error) {
-				if (error) {
-					console.error(error);
+        function callback(paymentMethod, error) {
+            if (error) {
+                console.error(error);
 
-					$(formSelector).find('.payment-errors').text(error.message);
-        			$(formSelector).find('button').prop('disabled', false);
-				} else {
-					console.log(paymentMethod);
+                $(formSelector).find('.payment-errors').text(error.message);
+                $(formSelector).find('button').prop('disabled', false);
+            } else {
+                console.log(paymentMethod);
 
-					$(formSelector).find('.payment-success').html("Created payment method with ID: '"+paymentMethod.id+"'\nFor account with ID: \t\t'"+paymentMethod.accountID+"'").wrap('<pre />');
+                $(formSelector).find('.payment-success').html("Created payment method with ID: '" + paymentMethod.id + "'\nFor account with ID: \t\t'" + paymentMethod.accountID + "'").wrap('<pre />');
 
-					// uncomment the following if you want to post the result to your backend immediately
-					/*
-			        var addPostVariable = function(varName, value) {
-			        	// add as 'hidden' form variables those values we wish to submit
-			            $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
-			        }
+                // uncomment the following if you want to post the result to your backend immediately
+                /*
+                 var addPostVariable = function(varName, value) {
+                 // add as 'hidden' form variables those values we wish to submit
+                 $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
+                 }
 
-			        var postVars = {
-						accountID: paymentMethod.accountID,
-						paymentMethodID: paymentMethod.id
-					};
+                 var postVars = {
+                 accountID: paymentMethod.accountID,
+                 paymentMethodID: paymentMethod.id
+                 };
 
-			        for (var i in postVars) {
-			            addPostVariable(i, postVars[i]);
-			        }
+                 for (var i in postVars) {
+                 addPostVariable(i, postVars[i]);
+                 }
 
-			        $(formSelector).attr("action", "handlePayment.php");
-			        $(formSelector).attr("method", "POST");
+                 $(formSelector).attr("action", "handlePayment.php");
+                 $(formSelector).attr("method", "POST");
 
-			        // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
-			        $(formSelector).get(0).submit();
-			        */
-				}
-			};
-        </script>
-	</head>
+                 // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
+                 $(formSelector).get(0).submit();
+                 */
+            }
+        }
+    </script>
+</head>
 
-	<body>
-		<form id="payment-form">
-			<span class="payment-errors"></span>
-			<span class="payment-success"></span>
+<body>
+<form id="payment-form">
+    <span class="payment-errors"></span>
+    <span class="payment-success"></span>
 
-			<div class="form-row">
-				<label>
-					<span>Card Number</span>
-					<input type="text" size="20" bf-data="number" value="4242424242424242"/>
-				</label>
-			</div>
+    <div class="form-row">
+        <label>
+            <span>Holder Name</span>
+            <input type="text" size="20" bf-data="holderName" value="John Doe"/>
+        </label>
+    </div>
 
-			<div class="form-row">
-				<label>
-					<span>CVC</span>
-					<input type="text" size="4" bf-data="cvc" value="123"/>
-				</label>
-			</div>
+    <div class="form-row">
+        <label>
+            <span>Bank Account Name</span>
+            <input type="text" size="20" bf-data="bankAccountName" value="John Doe's Bank"/>
+        </label>
+    </div>
 
-			<div class="form-row">
-				<label>
-					<span>Expiration (MM/YYYY)</span>
-					<input type="text" size="2" bf-data="exp-month" value="01"/>
-				</label>
-				<span> / </span>
-				<input type="text" size="4" bf-data="exp-year" value="2016"/>
-			</div>
+    <div class="form-row">
+        <label>
+            <span>Routing Number</span>
+            <input type="text" size="10" bf-data="routingNumber" value="110000000"/>
+        </label>
+    </div>
 
-			<button type="submit" disabled="true">Submit Payment</button>
-		</form>
-	</body>
+    <div class="form-row">
+        <label>
+            <span>Account Number</span>
+            <input type="text" size="10" bf-data="accountNumber" value="000123456789"/>
+        </label>
+    </div>
+
+    <input type="hidden" bf-data="accountID" value="ACCOUNT ID YOU WANT TO ADD THE PAYMENT METHOD TO" />
+
+    <button type="submit">Submit Payment</button>
+</form>
+</body>
 </html>
