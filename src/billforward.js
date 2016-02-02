@@ -1160,6 +1160,10 @@
             }
         })();
 
+        p['do'] = function() {
+            // DO NOTHING
+        };
+
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
