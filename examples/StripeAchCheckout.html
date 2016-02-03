@@ -19,6 +19,9 @@
         // Jquery-style selector pointing to your form
         var formSelector = '#payment-form';
 
+        // Jquery-style selector pointing to your verify form
+        var verifyFormSelector = '#verify-form';
+
         BillForward.captureBankAccountOnSubmit(formSelector, 'stripe', accountID, callback);
 
         function callback(paymentMethod, error) {
@@ -31,6 +34,49 @@
                 console.log(paymentMethod);
 
                 $(formSelector).find('.payment-success').html("Created payment method with ID: '" + paymentMethod.id + "'\nFor account with ID: \t\t'" + paymentMethod.accountID + "'").wrap('<pre />');
+                $(verifyFormSelector).find("input[bf-data=paymentMethodID]").val(paymentMethod.id);
+
+                // uncomment the following if you want to post the result to your backend immediately
+                /*
+                 var addPostVariable = function(varName, value) {
+                 // add as 'hidden' form variables those values we wish to submit
+                 $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
+                 }
+
+                 var postVars = {
+                 accountID: paymentMethod.accountID,
+                 paymentMethodID: paymentMethod.id
+                 };
+
+                 for (var i in postVars) {
+                 addPostVariable(i, postVars[i]);
+                 }
+
+                 $(formSelector).attr("action", "handlePayment.php");
+                 $(formSelector).attr("method", "POST");
+
+                 // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
+                 $(formSelector).get(0).submit();
+                 */
+            }
+        }
+
+        BillForward.verifyBankAccountOnSubmit(verifyFormSelector, 'stripe', accountID, verifyCallback);
+
+        function verifyCallback(paymentMethod, error) {
+            if (error) {
+                console.error(error);
+
+                $(verifyFormSelector).find('.payment-errors').text(error.message);
+                $(verifyFormSelector).find('button').prop('disabled', false);
+            } else {
+                console.log(paymentMethod);
+
+                $(verifyFormSelector).find('.payment-success').html(
+                        "Verified payment method with ID: \t'" + paymentMethod.id + "'\n" +
+                        "For account with ID: \t\t\t'" + paymentMethod.accountID + "'\n" +
+                        "The new payment method's state is: \t'" + paymentMethod.state + "'"
+                ).wrap('<pre />');
 
                 // uncomment the following if you want to post the result to your backend immediately
                 /*
@@ -92,9 +138,37 @@
         </label>
     </div>
 
-    <input type="hidden" bf-data="accountID" value="ACCOUNT ID YOU WANT TO ADD THE PAYMENT METHOD TO" />
+    <input type="hidden" bf-data="accountID" value="SET AS ACCOUNT ID" />
 
     <button type="submit">Submit Payment</button>
+</form>
+
+<form id="verify-form">
+    <span class="payment-errors"></span>
+    <span class="payment-success"></span>
+
+    <div class="form-row">
+        <label>
+            <span>Payment ID</span>
+            <input type="text" size="45" bf-data="paymentMethodID" value=""/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Amount 1</span>
+            <input type="text" size="4" bf-data="amount1" value="32"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Amount 2</span>
+            <input type="text" size="4" bf-data="amount2" value="45"/>
+        </label>
+    </div>
+
+    <button type="submit">Submit Verify</button>
 </form>
 </body>
 </html>

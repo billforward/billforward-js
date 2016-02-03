@@ -177,6 +177,36 @@
         return TheClass;
     })();
 
+    bfjs.StripeAchVerifyGateway = (function () {
+        var TheClass = function () {
+            // statics
+            this.key = 'stripeachverify';
+            this.depName = "StripeACHVerify";
+            this.depObj = null;
+            this.requireShim = {};
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function () {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+
+            lambda.prototype = TheClass.prototype;
+
+            return function () {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.BraintreeGateway = (function() {
         var TheClass = function() {
             // statics
@@ -438,8 +468,14 @@
             }
         })();
 
-        p.buildBFAjax = function(payload, endpoint) {
-            var controller = "tokenization/"
+        p.buildBFAjax = function(payload, endpoint, controller) {
+            if(!controller) {
+                controller = "tokenization/";
+            }
+
+            if(controller[controller.length - 1] != "/") {
+                controller += "/";
+            }
 
             var fullURL = this.transaction.bfjs.state.api.url + controller + endpoint;
             var auth = this.transaction.bfjs.state.api.token;
@@ -448,7 +484,7 @@
                 payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
-            var ajaxObj = {
+            return {
                 type: "POST",
                 url: fullURL+"?"+$.param({
                     'access_token': auth
@@ -458,7 +494,6 @@
                 crossDomain: true,
                 async: true
             };
-            return ajaxObj;
         };
 
         p.checkIfTransportShimNecessary = function() {
@@ -1182,6 +1217,72 @@
             console.log(payload);
 
             $.ajax(self.buildBFAjax(payload, "stripe-ach"))
+                .done(function (resp, msg, err) {
+                    self.transaction.callback(
+                        resp.results[0],
+                        null
+                    );
+                })
+                .fail(function (resp, msg, err) {
+                    self.transaction.callback(
+                        resp.responseJSON,
+                        self.jqXHRErrorToBFJSError(resp, msg, err, "other")
+                    );
+                })
+                .always(function() {
+                    $form.find("button[type=submit]").prop("disabled", false);
+                });
+        };
+
+        return TheClass;
+    })();
+
+    bfjs.StripeAchVerifyTransaction = (function () {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function () {
+            _parent.apply(this, arguments);
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function () {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+
+            lambda.prototype = TheClass.prototype;
+
+            return function () {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            // DO NOTHING
+        };
+
+        p.doSubmitDanceWhenReady = function () {
+            var self = this;
+
+            var $form = $(self.transaction.formElementCandidate);
+
+            var payload = {
+                amounts: [
+                    bfjs.core.getFormValue("amount1", $form),
+                    bfjs.core.getFormValue("amount2", $form)
+                ]
+            };
+
+            console.log(payload);
+
+            var paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
+
+            $.ajax(self.buildBFAjax(payload, paymentMethodID + "/verify-ach", "payment-methods"))
                 .done(function (resp, msg, err) {
                     self.transaction.callback(
                         resp.results[0],
@@ -2629,6 +2730,7 @@
     bfjs.gatewayInstances = {
         'stripe': bfjs.StripeGateway.construct(),
         'stripeach': bfjs.StripeAchGateway.construct(),
+        'stripeachverify': bfjs.StripeAchVerifyGateway.construct(),
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
         'sagepay': bfjs.SagePayGateway.construct(),
@@ -2638,6 +2740,7 @@
     bfjs.gatewayTransactionClasses = {
         'stripe': bfjs.StripeTransaction,
         'stripeach': bfjs.StripeAchTransaction,
+        'stripeachverify': bfjs.StripeAchVerifyTransaction,
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
         'sagepay': bfjs.SagePayTransaction,
@@ -2853,11 +2956,22 @@
         return invoke(formElementSelector, null, targetGateway, accountID, callback);
     };
 
+    bfjs.verifyBankAccountOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
+        if (targetGateway != "stripe") {
+            throw "'" + targetGateway + "' gateway does not support bank accounts";
+        } else {
+            // We are masking the stripe ach verify gateway as a plain stripe one
+            targetGateway = "stripeachverify";
+        }
+
+        return invoke(formElementSelector, null, targetGateway, accountID, callback);
+    };
+
     bfjs.captureCard = function(cardDetails, targetGateway, accountID, callback) {
         return invoke(null, cardDetails, targetGateway, accountID, callback);
     };
 
-    bfjs.captureBankAccount = function(cardDetails, targetGateway, accountID, callback) {
+    bfjs.captureBankAccount = function(bankAccountDetails, targetGateway, accountID, callback) {
         if (targetGateway != "stripe") {
             throw "'" + targetGateway + "' gateway does not support bank accounts";
         } else {
@@ -2865,7 +2979,18 @@
             targetGateway = "stripeach";
         }
 
-        return invoke(null, cardDetails, targetGateway, accountID, callback);
+        return invoke(null, bankAccountDetails, targetGateway, accountID, callback);
+    };
+
+    bfjs.verifyBankAccount = function(bankAccountDetails, targetGateway, accountID, callback) {
+        if (targetGateway != "stripe") {
+            throw "'" + targetGateway + "' gateway does not support bank accounts";
+        } else {
+            // We are masking the stripe ach verify gateway as a plain stripe one
+            targetGateway = "stripeachverify";
+        }
+
+        return invoke(null, bankAccountDetails, targetGateway, accountID, callback);
     };
 
     bfjs.useAPI = function(url, token, organizationID) {
@@ -2987,6 +3112,7 @@
             switch(gateway.toLowerCase()) {
                 case 'stripe':
                 case 'stripeach':
+                case 'stripeachverify':
                 case 'braintree':
                 case 'generic':
                 case 'sagepay':
