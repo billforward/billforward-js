@@ -13,7 +13,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -73,7 +73,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -99,7 +99,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -231,7 +231,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -257,7 +257,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -289,7 +289,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -325,7 +325,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -349,7 +349,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -385,7 +385,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -457,7 +457,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -507,7 +507,7 @@
              - Tip: To check for a range of IE versions, use if (!IE || IE < MAX_VERSION)...
             */
 
-            var IE = (function() { 
+            var IE = (function() {
                 if (document.documentMode) {
                     return document.documentMode;
                 } else {
@@ -543,7 +543,7 @@
                 });
                 return;
             }
-            
+
             $.ajax(ajaxObj)
             .success(function() {
                 self.preAuthSuccessHandler.apply(self, arguments);
@@ -570,7 +570,7 @@
                 });
                 return;
             }
-            
+
             $.ajax(ajaxObj)
             .success(function() {
                 self.authCaptureSuccessHandler.apply(self, arguments);
@@ -860,7 +860,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -901,7 +901,7 @@
                     self.startAuthCapture(self.preAuthResponsePayload);
                 };
 
-                this.submitDancer.doWhenReady(deferredTransaction);   
+                this.submitDancer.doWhenReady(deferredTransaction);
             // }
         };
 
@@ -948,7 +948,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -982,7 +982,7 @@
                 stripePublishableKey = data.results[0].publicKey;
                 if (!data.results[0].publicKey) {
                     failed = true;
-                }   
+                }
             } catch (e){
                 failed = true;
             }
@@ -1002,7 +1002,7 @@
 
             var stripePublishableKey = data.results[0].publicKey;
             Stripe.setPublishableKey(stripePublishableKey);
-            
+
             var tokenInfo = {};
 
             var resolvedValues = (function(mappings) {
@@ -1025,7 +1025,7 @@
             var setKeyToVal = function(key, value) {
                 tokenInfo[TheClass.mappings[key]] = value;
             };
-            
+
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm = resolvedValues[i];
@@ -1033,7 +1033,7 @@
                 var doDefault = function() {
                     setKeyToVal(i, valueFromForm);
                 };
-                
+
                 if (valueFromForm) {
                     switch (i) {
                         case 'exp-date':
@@ -1138,7 +1138,7 @@
 
                 // add BF-only attributes here
                 var additional = {};
-            
+
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
@@ -1153,7 +1153,7 @@
                             valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                             break;
                     }
-                    
+
                     if (valueFromForm) {
                         additional[TheClass.bfBypass[i]] = valueFromForm;
                     }
@@ -1202,17 +1202,21 @@
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
-            var $form = $(self.transaction.formElementCandidate);
+            var payload = self.transaction.state.cardDetails;
 
-            var payload = {
-                routingNumber: bfjs.core.getFormValue("routingNumber", $form),
-                accountNumber: bfjs.core.getFormValue("accountNumber", $form),
-                stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
-                holderName: bfjs.core.getFormValue("holderName", $form),
-                bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
-                accountID: bfjs.core.getFormValue("accountID", $form),
-                organizationID: self.transaction.bfjs.state.api.organizationID
-            };
+            if (!payload) {
+                var $form = $(self.transaction.formElementCandidate);
+
+                payload = {
+                    accountID: self.transaction.accountID,
+                    routingNumber: bfjs.core.getFormValue("routingNumber", $form),
+                    accountNumber: bfjs.core.getFormValue("accountNumber", $form),
+                    stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
+                    holderName: bfjs.core.getFormValue("holderName", $form),
+                    bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
+                    organizationID: self.transaction.bfjs.state.api.organizationID
+                };
+            }
 
             console.log(payload);
 
@@ -1269,18 +1273,30 @@
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
-            var $form = $(self.transaction.formElementCandidate);
+            var payload = self.transaction.state.cardDetails;
+            var paymentMethodID = null;
+            var $form = null;
 
-            var payload = {
-                amounts: [
-                    bfjs.core.getFormValue("amount1", $form),
-                    bfjs.core.getFormValue("amount2", $form)
-                ]
-            };
+            if (payload) {
+                paymentMethodID = payload.paymentMethodID;
+            } else {
+                $form = $(self.transaction.formElementCandidate);
+
+                payload = {
+                    amounts: [
+                        bfjs.core.getFormValue("amount1", $form),
+                        bfjs.core.getFormValue("amount2", $form)
+                    ]
+                };
+
+                paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
+            }
 
             console.log(payload);
 
-            var paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
+            if (!paymentMethodID) {
+                throw "Field 'paymentMethodID' cannot be null";
+            }
 
             $.ajax(self.buildBFAjax(payload, paymentMethodID + "/verify-ach", "payment-methods"))
                 .done(function (resp, msg, err) {
@@ -1295,8 +1311,10 @@
                         self.jqXHRErrorToBFJSError(resp, msg, err, "other")
                     );
                 })
-                .always(function() {
-                    $form.find("button[type=submit]").prop("disabled", false);
+                .always(function () {
+                    if ($form) {
+                        $form.find("button[type=submit]").prop("disabled", false);
+                    }
                 });
         };
 
@@ -1341,7 +1359,7 @@
             'name-last': 'lastName'
             //'company': 'company',
         };
-        
+
         // these, if present, will be thrown straight into BF authCapture request.
         TheClass.bfBypass = {
             'company-name': 'companyName',
@@ -1356,7 +1374,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1416,7 +1434,7 @@
                         resolvedEnvironment = BraintreeData.environments.sandbox;
             }
             this.resolvedEnvironment = resolvedEnvironment;
-            
+
             // console.log("env", environment);
             // console.log("resEnv", resolvedEnvironment);
 
@@ -1539,7 +1557,7 @@
 
         p.startAuthCapture = function(data) {
             var self = this;
-            
+
             var deviceDataValue;
             var nonceValue;
             if (this.myGateway.usePaypal && !this.transaction.state.cardDetails) {
@@ -1551,7 +1569,7 @@
                 // check for a nonce
                 var $paypalSelector = $(this.myGateway.paypalButtonSelector);
                 var nonceSelector = $paypalSelector.find("input[name='payment_method_nonce']");
-                
+
                 nonceValue = nonceSelector.val();
                 if (nonceValue) {
                     //this.gatewayResponseHandler(null, nonceValue);
@@ -1565,7 +1583,7 @@
                 for (var i in TheClass.mappingsProgrammatic) {
                     var mapping = TheClass.mappingsProgrammatic[i];
                     var valueFromForm = this.transaction.state.cardDetails[i];
-                    
+
                     if (valueFromForm) {
                         tokenInfo[TheClass.mappingsProgrammatic[i]] = valueFromForm;
                     }
@@ -1574,7 +1592,7 @@
                 for (var i in TheClass.mappings) {
                     var mapping = TheClass.mappings[i];
                     var valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
-                    
+
                     if (valueFromForm) {
                         tokenInfo[TheClass.mappingsProgrammatic[i]] = valueFromForm;
                     }
@@ -1624,14 +1642,14 @@
                     "paymentMethodNonce": nonce,
                     "accountID": this.transaction.accountID
                 };
-                
+
                 if (deviceData) {
                     payload.deviceData = deviceData;
                 }
 
                 // add BF-only attributes here
                 var additional = {};
-            
+
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
@@ -1646,7 +1664,7 @@
                             valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                             break;
                     }
-                    
+
                     if (valueFromForm) {
                         additional[TheClass.bfBypass[i]] = valueFromForm;
                     }
@@ -1702,7 +1720,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1736,7 +1754,7 @@
                 spreedlyEnvKey = data.results[0].publicKey;
                 if (!data.results[0].publicKey) {
                     failed = true;
-                }   
+                }
             } catch (e){
                 failed = true;
             }
@@ -1748,9 +1766,9 @@
                     detailObj: data
                 });
             }
-            
+
             var tokenInfo = {};
-            
+
             /*for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm;
@@ -1759,7 +1777,7 @@
                 } else {
                     valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                 }
-                
+
                 if (valueFromForm) {
                     switch (mapping) {
                         case 'exp_date':
@@ -1821,7 +1839,7 @@
             var setKeyToVal = function(key, value) {
                 tokenInfo[TheClass.mappings[key]] = value;
             };
-            
+
             for (var i in TheClass.mappings) {
                 var mapping = TheClass.mappings[i];
                 var valueFromForm = resolvedValues[i];
@@ -1829,7 +1847,7 @@
                 var doDefault = function() {
                     setKeyToVal(i, valueFromForm);
                 };
-                
+
                 if (valueFromForm) {
                     switch (i) {
                         case 'exp-date':
@@ -1930,7 +1948,7 @@
 
                 // add BF-only attributes here
                 var additional = {};
-            
+
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
@@ -1945,7 +1963,7 @@
                             valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                             break;
                     }
-                    
+
                     if (valueFromForm) {
                         additional[TheClass.bfBypass[i]] = valueFromForm;
                     }
@@ -1994,7 +2012,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -2086,8 +2104,8 @@
             // };
 
             /*var windowProxy;
-            window.onload=function(){ 
-                // Create a proxy window to send to and receive 
+            window.onload=function(){
+                // Create a proxy window to send to and receive
                 // messages from the iFrame
                 windowProxy = new Porthole.WindowProxy(
                     'http://other-domain.com/proxy.html', 'guestFrame');
@@ -2209,7 +2227,7 @@
                     $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
                 }
                 var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
-            
+
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
@@ -2220,7 +2238,7 @@
                         valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                         break;
                     }
-                    
+
                     if (valueFromForm) {
                         additional[TheClass.bfBypass[i]] = valueFromForm;
                     }
@@ -2291,7 +2309,7 @@
         TheClass.construct = (function() {
             // factory pattern for invoking own constructor with arguments
             // basically: return new this(arguments)
-            
+
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -2377,8 +2395,8 @@
             // };
 
             /*var windowProxy;
-            window.onload=function(){ 
-                // Create a proxy window to send to and receive 
+            window.onload=function(){
+                // Create a proxy window to send to and receive
                 // messages from the iFrame
                 windowProxy = new Porthole.WindowProxy(
                     'http://other-domain.com/proxy.html', 'guestFrame');
@@ -2585,7 +2603,7 @@
                 TheClass.construct = (function() {
                     // factory pattern for invoking own constructor with arguments
                     // basically: return new this(arguments)
-                    
+
                     function lambda(args) {
                         return TheClass.apply(this, args);
                     }
@@ -2666,7 +2684,7 @@
                     $.extend(lateCardDetails, self.myGateway.getDeferredCardDetails());
                 }
                 var extendedDetails = $.extend(self.transaction.state.cardDetails, lateCardDetails);
-            
+
                 for (var i in TheClass.bfBypass) {
                     var mapping = TheClass.bfBypass[i];
                     var valueFromForm;
@@ -2677,7 +2695,7 @@
                         valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                         break;
                     }
-                    
+
                     if (valueFromForm) {
                         additional[TheClass.bfBypass[i]] = valueFromForm;
                     }
@@ -2810,9 +2828,9 @@
             if (!actor.loadMe) {
                 continue;
             }
-            
+
             var loadedCallback = actor.loadedCallback;
-            
+
             switch (actor.depName) {
                 // case 'Stripe':
                     // stripeActor = bfjs.lateActors[i];
@@ -2827,7 +2845,7 @@
                         actor.loadedCallback = function() {
                             // we allow Braintree to call its own loaded callback only once BraintreeData is in.
                             var url = "https://js.braintreegateway.com/v1/braintree-data.js";
-                            
+
                             // tag load BraintreeData
                             bfjs.loadScript(url, originalLoadedCallback, actor);
                         };
@@ -2849,7 +2867,7 @@
                             callback: loadedCallback
                         });
                     }
-            }            
+            }
         }
 
         for (var i = 0; i<queue.length; i++) {
@@ -2885,14 +2903,14 @@
         document.getElementsByTagName("head")[0].appendChild(script);
     };
 
-    bfjs.core.getFormInput = function(key, $formElement) {        
+    bfjs.core.getFormInput = function(key, $formElement) {
         return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']");
     };
 
-    bfjs.core.valueFromFormInput = function($formInput) {        
+    bfjs.core.valueFromFormInput = function($formInput) {
         return $formInput.val();
     };
-    
+
     bfjs.core.getFormValue = function(key, $formElement) {
         var $input = bfjs.core.getFormInput(key, $formElement);
         var value = bfjs.core.valueFromFormInput($input);
@@ -2937,7 +2955,7 @@
         var newTransaction = cardDetails
         ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails)
         : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
-        
+
         bfjs.core.doWhenReady(newTransaction);
     };
 
@@ -3048,7 +3066,7 @@
          - Tip: To check for a range of IE versions, use if (!IE || IE < MAX_VERSION)...
         */
 
-        var IE = (function() { 
+        var IE = (function() {
             if (document.documentMode) {
                 return document.documentMode;
             } else {
@@ -3124,7 +3142,7 @@
                     throw "'"+gateway+"' is not the name of any supported gateway."
             }
         }
-        
+
         if (bfjs.core.gatewayChosen){
             bfjs.grabScripts();
         }
