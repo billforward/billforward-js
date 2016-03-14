@@ -1220,7 +1220,7 @@
 
             console.log(payload);
 
-            $.ajax(self.buildBFAjax(payload, "stripe-ach"))
+            $.ajax(self.buildBFAjax(payload, "ach"))
                 .done(function (resp, msg, err) {
                     self.transaction.callback(
                         resp.results[0],
@@ -1298,7 +1298,7 @@
                 throw "Field 'paymentMethodID' cannot be null";
             }
 
-            $.ajax(self.buildBFAjax(payload, paymentMethodID + "/verify-ach", "payment-methods"))
+            $.ajax(self.buildBFAjax(payload, paymentMethodID + "/verify/micro-deposits", "payment-methods"))
                 .done(function (resp, msg, err) {
                     self.transaction.callback(
                         resp.results[0],
