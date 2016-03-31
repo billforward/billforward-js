@@ -687,15 +687,187 @@ BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, cal
 ### Capture Bank Account
 
 For the moment the only bank account capture supported is in `stripe` using `ACH`.
-The workflow is really similar to the one already seen with cards, the only major difference is in the method name.
+When capturing a bank account the flow can be divided in two steps:
 
-#### Capture with form
+- Capturing
+- Verification
 
+#### Capturing with form
 
+This step creates an unverified bank account on the backend side. First of all a `html` form is needed:
+
+```html
+<form id="payment-form">
+    <span class="payment-errors"></span>
+    <span class="payment-success"></span>
+
+    <div class="form-row">
+        <label>
+            <span>Holder Name</span>
+            <input type="text" size="20" bf-data="holderName" value="John Doe"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Bank Account Name</span>
+            <input type="text" size="20" bf-data="bankAccountName" value="John Doe's Bank"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Routing Number</span>
+            <input type="text" size="10" bf-data="routingNumber" value="110000000"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Account Number</span>
+            <input type="text" size="10" bf-data="accountNumber" value="000123456789"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Account Holder Type</span>
+            <select bf-data="accountHolderType">
+                <option>individual</option>
+                <option>company</option>
+            </select>
+        </label>
+    </div>
+
+    <input type="hidden" bf-data="accountID" value="SET AS ACCOUNT ID" />
+
+    <button type="submit">Submit Payment</button>
+</form>
+```
+
+The form is comprehensive of the subsequent fields:
+
+- **holderName:** the account holder name.
+- **bankAccountName:** a label identifying the bank account
+- **routingNumber:** the routing number
+- **accountNumber:**  the account number
+- **accountHolderType:** the holder type (accepted values are 'individual' and 'company')
+- **accountID:** the accound's id we are adding the bank account to
+
+A small amount of `javascript` is neede as well to bootstrap correctly the `html form`:
+
+```javascript
+        var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
+        var bfAPIURL = 'https://api-sandbox.billforward.net:443/v1/';
+
+        // connect to BillForward using credentials
+        BillForward.useAPI(bfAPIURL, bfAPIKey);
+
+        // use a 'null' account if you want to capture this card against a new customer
+        var accountID = null;
+
+        // Jquery-style selector pointing to your form
+        var formSelector = '#payment-form';
+
+        // Jquery-style selector pointing to your verify form
+        var verifyFormSelector = '#verify-form';
+
+        BillForward.captureBankAccountOnSubmit(formSelector, 'stripe', accountID, callback);
+
+        function callback(paymentMethod, error) {
+            if (error) {
+                console.error(error);
+            } else {
+                console.log(paymentMethod);
+
+                // Do some stuff once the capture is complete
+            }
+        }
+```
 
 #### Capture directly with code
 
+Is possible to capture a bank account directly with javascript without the usage of an `html form`.
+Follows an example:
 
+```javascript
+var bankDetails = {
+    "routingNumber":"110000000",
+    "accountNumber":"000123456789",
+    "holderName":"John Doe",
+    "bankAccountName":"John Doe's Bank",
+    "accountHolderType":"company"
+};
+
+BillForward.captureBankAccount(bankDetails, 'stripe', accountID, callback);
+
+```
+
+#### Verify with a form
+
+After we have successfully created a bank account we have to verify it to being able to use it for a payment. The way `stripe` verify its bank accounts is through `micro deposits`.
+After a bank account is created, two micro deposits (of the order of a couple tens of cents) are being made on the account bank account. The two amounts have to  be used as input values for the next step.
+
+Here is how the `html` code is supposed to look like:
+
+```html
+<form id="verify-form">
+    <span class="payment-errors"></span>
+    <span class="payment-success"></span>
+
+    <div class="form-row">
+        <label>
+            <span>Payment ID</span>
+            <input type="text" size="45" bf-data="paymentMethodID" value="PAYMENT METHOD ID"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Amount 1</span>
+            <input type="text" size="4" bf-data="amount1" value="FIRST MICRODEPOSIT AMOUNT"/>
+        </label>
+    </div>
+
+    <div class="form-row">
+        <label>
+            <span>Amount 2</span>
+            <input type="text" size="4" bf-data="amount2" value="SECOND MICRODEPOSIT AMOUNT"/>
+        </label>
+    </div>
+
+    <button type="submit">Submit Verify</button>
+</form>
+```
+
+Follows the `javascript` code needed to bootstrap the form:
+
+ ```javascript
+
+BillForward.verifyBankAccountOnSubmit(verifyFormSelector, 'stripe', accountID, verifyCallback);
+
+ function verifyCallback(paymentMethod, error) {
+             if (error) {
+                 console.error(error);
+             } else {
+                 console.log(paymentMethod);
+                 //Do stuff...
+             }
+         }
+ ```
+
+#### Verify with code
+
+Like for the capturing it's possible to do the verification step through code only:
+
+```javascript
+var bankDetails = {
+        "amounts":["32","45"]
+    };
+
+BillForward.verifyBankAccount(bankDetails, 'stripe', accountID, callback);
+
+```
 
 ### Example checkout
 
