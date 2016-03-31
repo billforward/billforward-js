@@ -684,6 +684,19 @@ var callbacks = {
 BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, callbacks);
 ```
 
+### Capture Bank Account
+
+For the moment the only bank account capture supported is in `stripe` using `ACH`.
+The workflow is really similar to the one already seen with cards, the only major difference is in the method name.
+
+#### Capture with form
+
+
+
+#### Capture directly with code
+
+
+
 ### Example checkout
 
 See the 'examples' folder for examples of full worked checkouts.
