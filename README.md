@@ -692,6 +692,18 @@ When capturing a bank account the flow can be divided in two steps:
 - Capturing
 - Verification
 
+Once the `Capture` has been made, `stripe` will deposit two random amounts on the bank account. These amounts have to be
+verified against (or in other words, *sent to*) `stripe`. You can do the verification process directly using `billforward-js`.
+
+In more details what happens is:
+- Capture a bank account using `billforward-js`
+- Stripe deposits on the bank account two random amounts
+- `Billforward` creates a `payment method` with `state = 'Pending'`
+- Verify the two amounts through `billforward-js`
+- If the amounts are correct `Billforward` switches the `payment method` state to `Active`
+- The bank account is now verified and ready to go
+
+
 #### Capturing with form
 
 This step creates an unverified bank account on the backend side. First of all a `html` form is needed:
