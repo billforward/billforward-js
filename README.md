@@ -686,27 +686,27 @@ BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, cal
 
 ### Capture Bank Account
 
-For the moment the only bank account capture supported is in `stripe` using `ACH`.
+For the moment the only bank account capture supported is with _Stripe_ using `ACH`.
 When capturing a bank account the flow can be divided in two steps:
 
 - Capturing
 - Verification
 
-Once the `Capture` has been made, `stripe` will deposit two random amounts on the bank account. These amounts have to be
-verified against (or in other words, *sent to*) `stripe`. You can do the verification process directly using `billforward-js`.
+Once the **Capture** has been made, Stripe will deposit two random amounts on the bank account. These amounts have to be
+verified against (or in other words, *sent to*) Stripe. You can do the verification process directly using _BillForward.js_.
 
 In more details what happens is:
-- Capture a bank account using `billforward-js`
+- Capture a bank account using _BillForward.js_
 - Stripe deposits on the bank account two random amounts
-- `Billforward` creates a `payment method` with `state = 'Pending'`
-- Verify the two amounts through `billforward-js`
-- If the amounts are correct `Billforward` switches the `payment method` state to `Active`
+- A BillForward PaymentMethod with `state = 'Pending'` is created
+- Verify the two amounts through _BillForward.js_
+- If the amounts are correct, BillForward switches the PaymentMethod `state` to `Active`
 - The bank account is now verified and ready to go
 
 
 #### Capturing with form
 
-This step creates an unverified bank account on the backend side. First of all a `html` form is needed:
+This step creates an unverified bank account on both Stripe and BillForward backends. First of all a _HTML_ form is needed:
 
 ```html
 <form id="payment-form">
@@ -759,12 +759,14 @@ This step creates an unverified bank account on the backend side. First of all a
 
 The form is comprised of the following fields:
 
-- **holderName:** the account holder name.
-- **bankAccountName:** a label identifying the bank account
-- **routingNumber:** the routing number
-- **accountNumber:**  the account number
-- **accountHolderType:** the holder type (accepted values are 'individual' and 'company')
-- **accountID:** the accound's id we are adding the bank account to
+| Field name          | Description |
+| ------------------- | ---------- |
+| `holderName`        | the account holder name. |
+| `bankAccountName`   | a label identifying the bank account |
+| `routingNumber`     | the routing number |
+| `accountNumber`     |  the account number |
+| `accountHolderType` | the holder type (accepted values are 'individual' and 'company') |
+| `accountID`         | the accound's ID to which we are adding the bank account |
 
 A small amount of `javascript` is needed as well to bootstrap correctly the `html form`:
 
@@ -817,10 +819,13 @@ BillForward.captureBankAccount(bankDetails, 'stripe', accountID, callback);
 
 #### Verify with a form
 
-After we have successfully created a bank account we have to verify it to be able to use it for a payment. The way `stripe` verify its bank accounts is through `micro deposits`.
+After we have successfully created a bank account we have to verify it to be able to use it for a payment.
+
+The way Stripe verifies its bank accounts is through **micro deposits**.
+
 After a bank account is created, two micro deposits (of the order of a couple tens of cents) are made on the BillForward Account's bank account. The two amounts have to  be used as input values for the next step.
 
-Here is how the `html` code is supposed to look like:
+How the _HTML_ code is supposed to look:
 
 ```html
 <form id="verify-form">
@@ -852,7 +857,7 @@ Here is how the `html` code is supposed to look like:
 </form>
 ```
 
-Follows the `javascript` code needed to bootstrap the form:
+Follows the Javascript code needed to bootstrap the form:
 
 ```javascript
 
