@@ -768,7 +768,7 @@ The form is comprised of the following fields:
 | `accountHolderType` | the holder type (accepted values are 'individual' and 'company') |
 | `accountID`         | the accound's ID to which we are adding the bank account |
 
-A small amount of `javascript` is needed as well to bootstrap correctly the `html form`:
+A small amount of Javascript is needed as well to bootstrap correctly the HTML form:
 
 ```javascript
         var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
