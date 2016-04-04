@@ -757,7 +757,7 @@ This step creates an unverified bank account on the backend side. First of all a
 </form>
 ```
 
-The form is comprehensive of the subsequent fields:
+The form is comprised of the following fields:
 
 - **holderName:** the account holder name.
 - **bankAccountName:** a label identifying the bank account
@@ -766,7 +766,7 @@ The form is comprehensive of the subsequent fields:
 - **accountHolderType:** the holder type (accepted values are 'individual' and 'company')
 - **accountID:** the accound's id we are adding the bank account to
 
-A small amount of `javascript` is neede as well to bootstrap correctly the `html form`:
+A small amount of `javascript` is needed as well to bootstrap correctly the `html form`:
 
 ```javascript
         var bfAPIKey = 'YOUR BILLFORWARD PUBLIC TOKEN HERE';
@@ -799,8 +799,8 @@ A small amount of `javascript` is neede as well to bootstrap correctly the `html
 
 #### Capture directly with code
 
-Is possible to capture a bank account directly with javascript without the usage of an `html form`.
-Follows an example:
+It is possible to capture a bank account directly with javascript without the usage of an `html form`.
+For example:
 
 ```javascript
 var bankDetails = {
@@ -817,8 +817,8 @@ BillForward.captureBankAccount(bankDetails, 'stripe', accountID, callback);
 
 #### Verify with a form
 
-After we have successfully created a bank account we have to verify it to being able to use it for a payment. The way `stripe` verify its bank accounts is through `micro deposits`.
-After a bank account is created, two micro deposits (of the order of a couple tens of cents) are being made on the account bank account. The two amounts have to  be used as input values for the next step.
+After we have successfully created a bank account we have to verify it to be able to use it for a payment. The way `stripe` verify its bank accounts is through `micro deposits`.
+After a bank account is created, two micro deposits (of the order of a couple tens of cents) are made on the BillForward Account's bank account. The two amounts have to  be used as input values for the next step.
 
 Here is how the `html` code is supposed to look like:
 
@@ -854,19 +854,19 @@ Here is how the `html` code is supposed to look like:
 
 Follows the `javascript` code needed to bootstrap the form:
 
- ```javascript
+```javascript
 
 BillForward.verifyBankAccountOnSubmit(verifyFormSelector, 'stripe', accountID, verifyCallback);
 
- function verifyCallback(paymentMethod, error) {
-             if (error) {
-                 console.error(error);
-             } else {
-                 console.log(paymentMethod);
-                 //Do stuff...
-             }
-         }
- ```
+function verifyCallback(paymentMethod, error) {
+    if (error) {
+        console.error(error);
+    } else {
+        console.log(paymentMethod);
+        //Do stuff...
+    }
+}
+```
 
 #### Verify with code
 
