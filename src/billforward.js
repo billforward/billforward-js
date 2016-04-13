@@ -1214,6 +1214,7 @@
                     stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
                     holderName: bfjs.core.getFormValue("holderName", $form),
                     bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
+                    accountHolderType: bfjs.core.getFormValue("accountHolderType", $form),
                     organizationID: self.transaction.bfjs.state.api.organizationID
                 };
             }
