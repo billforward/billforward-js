@@ -787,7 +787,7 @@
             // TODO: should move this server side
             if(phase && phase == "other") {
                 error.code = 4000;
-                error.message = jqXHR.responseJSON.errorMessage;
+                error.message = jqXHR.responseJSON ? jqXHR.responseJSON.errorMessage : json.errorMessage;
             }
 
             return error;
@@ -1207,19 +1207,27 @@
             if (!payload) {
                 var $form = $(self.transaction.formElementCandidate);
 
-                payload = {
-                    accountID: self.transaction.accountID,
-                    routingNumber: bfjs.core.getFormValue("routingNumber", $form),
-                    accountNumber: bfjs.core.getFormValue("accountNumber", $form),
-                    stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
-                    holderName: bfjs.core.getFormValue("holderName", $form),
-                    bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
-                    accountHolderType: bfjs.core.getFormValue("accountHolderType", $form),
-                    organizationID: self.transaction.bfjs.state.api.organizationID
-                };
+                payload = {};
+
+                if (self.transaction.formElementCandidate) {
+                    payload = {
+                        accountID: bfjs.core.getFormValue("accountID", $form),
+                        routingNumber: bfjs.core.getFormValue("routingNumber", $form),
+                        accountNumber: bfjs.core.getFormValue("accountNumber", $form),
+                        stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
+                        holderName: bfjs.core.getFormValue("holderName", $form),
+                        bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
+                        accountHolderType: bfjs.core.getFormValue("accountHolderType", $form),
+                        organizationID: self.transaction.bfjs.state.api.organizationID,
+                        defaultPaymentMethod: bfjs.core.getFormValue("use-as-default-payment-method", $form)
+                    };
+                }
             }
 
-            console.log(payload);
+            
+            if(!payload.accountID) {
+                payload.accountID = self.transaction.accountID;
+            }
 
             $.ajax(self.buildBFAjax(payload, "ach"))
                 .done(function (resp, msg, err) {
@@ -1235,7 +1243,9 @@
                     );
                 })
                 .always(function() {
-                    $form.find("button[type=submit]").prop("disabled", false);
+                    if (self.transaction.formElementCandidate) {
+                        $form.find("button[type=submit]").prop("disabled", false);
+                    }
                 });
         };
 
@@ -1293,7 +1303,7 @@
                 paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
             }
 
-            console.log(payload);
+            // console.log(payload);
 
             if (!paymentMethodID) {
                 throw "Field 'paymentMethodID' cannot be null";
@@ -2909,6 +2919,9 @@
     };
 
     bfjs.core.valueFromFormInput = function($formInput) {
+        if ($formInput.attr('type') === "checkbox") {
+            return $formInput.is(':checked');
+        }
         return $formInput.val();
     };
 

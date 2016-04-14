@@ -751,6 +751,13 @@ This step creates an unverified bank account on both Stripe and BillForward back
         </label>
     </div>
 
+    <div class="form-row">
+        <label>
+            <span>Make Default</span>
+            <input type="checkbox" bf-data="use-as-default-payment-method" />
+        </label>
+    </div>
+
     <input type="hidden" bf-data="accountID" value="SET AS ACCOUNT ID" />
 
     <button type="submit">Submit Payment</button>
@@ -767,6 +774,7 @@ The form is comprised of the following fields:
 | `accountNumber`     |  the account number |
 | `accountHolderType` | the holder type (accepted values are 'individual' and 'company') |
 | `accountID`         | the accound's ID to which we are adding the bank account |
+| `defaultPaymentMethod` | checked if the account has to be the default for the account |
 
 A small amount of Javascript is needed as well to bootstrap correctly the HTML form:
 
@@ -810,12 +818,15 @@ var bankDetails = {
     "accountNumber":"000123456789",
     "holderName":"John Doe",
     "bankAccountName":"John Doe's Bank",
-    "accountHolderType":"company"
+    "accountHolderType":"company",
+    "defaultPaymentMethod" : true
 };
 
 BillForward.captureBankAccount(bankDetails, 'stripe', accountID, callback);
 
 ```
+
+The involved field names are the same as for the form capture and are self explanatory.
 
 #### Verify with a form
 
