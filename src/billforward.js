@@ -1207,6 +1207,9 @@
             if (self.transaction.formElementCandidate) {
                 var $form = $(self.transaction.formElementCandidate);
 
+                var isDefaultFormValue = bfjs.core.getFormValue("use-as-default-payment-method", $form);
+                var isDefaultPayment = typeof isDefaultFormValue === "string" ? isDefaultFormValue !== "false" : !!isDefaultFormValue;
+
                 payload = {
                     accountID: bfjs.core.getFormValue("account-id", $form),
                     routingNumber: bfjs.core.getFormValue("routing-number", $form),
@@ -1215,8 +1218,8 @@
                     holderName: bfjs.core.getFormValue("holder-name", $form),
                     bankAccountName: bfjs.core.getFormValue("bank-account-name", $form),
                     accountHolderType: bfjs.core.getFormValue("account-holder-type", $form),
-                    defaultPaymentMethod: bfjs.core.getFormValue("use-as-default-payment-method", $form)
-                };
+                    defaultPaymentMethod: isDefaultPayment
+                }
             } else {
                 var details = $.extend({}, self.transaction.state.cardDetails);
 
