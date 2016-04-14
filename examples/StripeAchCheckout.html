@@ -113,41 +113,30 @@
     <div class="form-row">
         <label>
             <span>Holder Name</span>
-            <input type="text" size="20" bf-data="holderName" value="John Doe"/>
+            <input type="text" size="20" bf-data="holder-name" value="John Doe"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Bank Account Name</span>
-            <input type="text" size="20" bf-data="bankAccountName" value="John Doe's Bank"/>
+            <input type="text" size="20" bf-data="bank-account-name" value="John Doe's Bank"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Routing Number</span>
-            <input type="text" size="10" bf-data="routingNumber" value="110000000"/>
+            <input type="text" size="10" bf-data="routing-number" value="110000000"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Account Number</span>
-            <input type="text" size="10" bf-data="accountNumber" value="000123456789"/>
+            <input type="text" size="10" bf-data="account-number" value="000123456789"/>
         </label>
     </div>
-
-    <div class="form-row">
-        <label>
-            <span>Account Holder Type</span>
-            <select bf-data="accountHolderType">
-                <option>individual</option>
-                <option>company</option>
-            </select>
-        </label>
-    </div>
-
 
     <div class="form-row">
         <label>
@@ -156,7 +145,17 @@
         </label>
     </div>
 
-    <input type="hidden" bf-data="accountID" value="SET AS ACCOUNT ID" />
+    <div class="form-row">
+        <label>
+            <span>Account Holder Type</span>
+            <select bf-data="account-holder-type">
+                <option>individual</option>
+                <option>company</option>
+            </select>
+        </label>
+    </div>
+
+    <input type="hidden" bf-data="account-id" value="SET AS ACCOUNT ID" />
 
     <button type="submit">Submit Payment</button>
 </form>
@@ -168,7 +167,7 @@
     <div class="form-row">
         <label>
             <span>Payment ID</span>
-            <input type="text" size="45" bf-data="paymentMethodID" value=""/>
+            <input type="text" size="45" bf-data="payment-method-id" value=""/>
         </label>
     </div>
 

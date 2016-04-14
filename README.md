@@ -716,35 +716,35 @@ This step creates an unverified bank account on both Stripe and BillForward back
     <div class="form-row">
         <label>
             <span>Holder Name</span>
-            <input type="text" size="20" bf-data="holderName" value="John Doe"/>
+            <input type="text" size="20" bf-data="holder-name" value="John Doe"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Bank Account Name</span>
-            <input type="text" size="20" bf-data="bankAccountName" value="John Doe's Bank"/>
+            <input type="text" size="20" bf-data="bank-account-name" value="John Doe's Bank"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Routing Number</span>
-            <input type="text" size="10" bf-data="routingNumber" value="110000000"/>
+            <input type="text" size="10" bf-data="routing-number" value="110000000"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Account Number</span>
-            <input type="text" size="10" bf-data="accountNumber" value="000123456789"/>
+            <input type="text" size="10" bf-data="account-number" value="000123456789"/>
         </label>
     </div>
 
     <div class="form-row">
         <label>
             <span>Account Holder Type</span>
-            <select bf-data="accountHolderType">
+            <select bf-data="account-holder-type">
                 <option>individual</option>
                 <option>company</option>
             </select>
@@ -758,7 +758,7 @@ This step creates an unverified bank account on both Stripe and BillForward back
         </label>
     </div>
 
-    <input type="hidden" bf-data="accountID" value="SET AS ACCOUNT ID" />
+    <input type="hidden" bf-data="account-id" value="SET AS ACCOUNT ID" />
 
     <button type="submit">Submit Payment</button>
 </form>
@@ -768,13 +768,13 @@ The form is comprised of the following fields:
 
 | Field name          | Description |
 | ------------------- | ---------- |
-| `holderName`        | the account holder name. |
-| `bankAccountName`   | a label identifying the bank account |
-| `routingNumber`     | the routing number |
-| `accountNumber`     |  the account number |
-| `accountHolderType` | the holder type (accepted values are 'individual' and 'company') |
-| `accountID`         | the accound's ID to which we are adding the bank account |
-| `defaultPaymentMethod` | checked if the account has to be the default for the account |
+| `holder-name`        | the account holder name. |
+| `bank-account-name`   | a label identifying the bank account |
+| `routing-number`     | the routing number |
+| `account-number`     |  the account number |
+| `account-holder-type` | the holder type (accepted values are 'individual' and 'company') |
+| `account-id`         | the accound's ID to which we are adding the bank account |
+| `use-as-default-payment-method` | checked if the account has to be the default for the account |
 
 A small amount of Javascript is needed as well to bootstrap correctly the HTML form:
 
@@ -814,12 +814,12 @@ For example:
 
 ```javascript
 var bankDetails = {
-    "routingNumber":"110000000",
-    "accountNumber":"000123456789",
-    "holderName":"John Doe",
-    "bankAccountName":"John Doe's Bank",
-    "accountHolderType":"company",
-    "defaultPaymentMethod" : true
+    "routing-number":"110000000",
+    "account-number":"000123456789",
+    "holder-name":"John Doe",
+    "bank-account-name":"John Doe's Bank",
+    "account-holder-type":"company",
+    "use-as-default-payment-method" : true
 };
 
 BillForward.captureBankAccount(bankDetails, 'stripe', accountID, callback);
@@ -846,7 +846,7 @@ How the _HTML_ code is supposed to look:
     <div class="form-row">
         <label>
             <span>Payment ID</span>
-            <input type="text" size="45" bf-data="paymentMethodID" value="PAYMENT METHOD ID"/>
+            <input type="text" size="45" bf-data="payment-method-id" value="PAYMENT METHOD ID"/>
         </label>
     </div>
 

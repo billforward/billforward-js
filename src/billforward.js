@@ -1202,30 +1202,45 @@
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
-            var payload = self.transaction.state.cardDetails;
+            var payload;
 
-            if (!payload) {
+            if (self.transaction.formElementCandidate) {
                 var $form = $(self.transaction.formElementCandidate);
 
-                payload = {};
+                payload = {
+                    accountID: bfjs.core.getFormValue("account-id", $form),
+                    routingNumber: bfjs.core.getFormValue("routing-number", $form),
+                    accountNumber: bfjs.core.getFormValue("account-number", $form),
+                    stripeCustomerID: bfjs.core.getFormValue("stripe-customer-id", $form),
+                    holderName: bfjs.core.getFormValue("holder-name", $form),
+                    bankAccountName: bfjs.core.getFormValue("bank-account-name", $form),
+                    accountHolderType: bfjs.core.getFormValue("account-holder-type", $form),
+                    defaultPaymentMethod: bfjs.core.getFormValue("use-as-default-payment-method", $form)
+                };
+            } else {
+                var details = $.extend({}, self.transaction.state.cardDetails);
 
-                if (self.transaction.formElementCandidate) {
-                    payload = {
-                        accountID: bfjs.core.getFormValue("accountID", $form),
-                        routingNumber: bfjs.core.getFormValue("routingNumber", $form),
-                        accountNumber: bfjs.core.getFormValue("accountNumber", $form),
-                        stripeCustomerID: bfjs.core.getFormValue("stripeCustomerID", $form),
-                        holderName: bfjs.core.getFormValue("holderName", $form),
-                        bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
-                        accountHolderType: bfjs.core.getFormValue("accountHolderType", $form),
-                        organizationID: self.transaction.bfjs.state.api.organizationID,
-                        defaultPaymentMethod: bfjs.core.getFormValue("use-as-default-payment-method", $form)
-                    };
+                var dictionary = {
+                    "account-id": "accountID",
+                    "routing-number": "routingNumber",
+                    "account-number": "accountNumber",
+                    "stripe-customer-id": "stripeCustomerID",
+                    "holder-name": "holderName",
+                    "bank-account-name": "bankAccountName",
+                    "account-holder-type": "accountHolderType",
+                    "use-as-default-payment-method": "defaultPaymentMethod"
+                };
+
+                payload = {};
+                for (var key in details) {
+                    if (details.hasOwnProperty(key)) {
+                        var translatedKey = dictionary[key] ? dictionary[key] : key;
+                        payload[translatedKey] = details[key];
+                    }
                 }
             }
 
-            
-            if(!payload.accountID) {
+            if (!payload.accountID) {
                 payload.accountID = self.transaction.accountID;
             }
 
@@ -1242,8 +1257,9 @@
                         self.jqXHRErrorToBFJSError(resp, msg, err, "other")
                     );
                 })
-                .always(function() {
+                .always(function () {
                     if (self.transaction.formElementCandidate) {
+                        var $form = $(self.transaction.formElementCandidate);
                         $form.find("button[type=submit]").prop("disabled", false);
                     }
                 });
@@ -1284,13 +1300,11 @@
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
-            var payload = self.transaction.state.cardDetails;
+            var payload = null;
             var paymentMethodID = null;
             var $form = null;
 
-            if (payload) {
-                paymentMethodID = payload.paymentMethodID;
-            } else {
+            if (self.transaction.formElementCandidate) {
                 $form = $(self.transaction.formElementCandidate);
 
                 payload = {
@@ -1300,10 +1314,31 @@
                     ]
                 };
 
-                paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
-            }
+                paymentMethodID = bfjs.core.getFormValue("payment-method-id", $form);
+            } else {
+                var details = $.extend({}, self.transaction.state.cardDetails);
 
-            // console.log(payload);
+                var dictionary = {
+                    "payment-method-id": "paymentMethodID"
+                };
+
+                payload = {};
+                for (var key in details) {
+                    if (details.hasOwnProperty(key)) {
+                        var translatedKey = dictionary[key] ? dictionary[key] : key;
+                        payload[translatedKey] = details[key];
+                    }
+                }
+
+                if (!payload.amounts) {
+                    payload.amounts = [
+                        details.amount1,
+                        details.amount2
+                    ];
+                }
+
+                paymentMethodID = payload.paymentMethodID;
+            }
 
             if (!paymentMethodID) {
                 throw "Field 'paymentMethodID' cannot be null";
