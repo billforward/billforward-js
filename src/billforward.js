@@ -1204,7 +1204,7 @@
 
             var payload;
 
-            if (!self.transaction.formElementCandidate) {
+            if (self.transaction.formElementCandidate) {
                 var $form = $(self.transaction.formElementCandidate);
 
                 payload = {
@@ -1234,7 +1234,7 @@
                 payload = {};
                 for (var key in details) {
                     if (details.hasOwnProperty(key)) {
-                        var translatedKey = dictionary[kye] ? dictionary[kye] : key;
+                        var translatedKey = dictionary[key] ? dictionary[key] : key;
                         payload[translatedKey] = details[key];
                     }
                 }
@@ -1300,13 +1300,11 @@
         p.doSubmitDanceWhenReady = function () {
             var self = this;
 
-            var payload = self.transaction.state.cardDetails;
+            var payload = null;
             var paymentMethodID = null;
             var $form = null;
 
-            if (payload) {
-                paymentMethodID = payload.paymentMethodID;
-            } else {
+            if (self.transaction.formElementCandidate) {
                 $form = $(self.transaction.formElementCandidate);
 
                 payload = {
@@ -1316,10 +1314,29 @@
                     ]
                 };
 
-                paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
-            }
+                paymentMethodID = bfjs.core.getFormValue("payment-method-id", $form);
+            } else {
+                var details = $.extend({}, self.transaction.state.cardDetails);
 
-            // console.log(payload);
+                var dictionary = {
+                    "payment-method-id": "paymentMethodID"
+                };
+
+                payload = {};
+                for (var key in details) {
+                    if (details.hasOwnProperty(key)) {
+                        var translatedKey = dictionary[key] ? dictionary[key] : key;
+                        payload[translatedKey] = details[key];
+                    }
+                }
+
+                payload.amounts = [
+                    details.amount1,
+                    details.amount2
+                ];
+
+                paymentMethodID = payload.paymentMethodID;
+            }
 
             if (!paymentMethodID) {
                 throw "Field 'paymentMethodID' cannot be null";
