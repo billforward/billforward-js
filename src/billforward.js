@@ -1330,10 +1330,12 @@
                     }
                 }
 
-                payload.amounts = [
-                    details.amount1,
-                    details.amount2
-                ];
+                if (!payload.amounts) {
+                    payload.amounts = [
+                        details.amount1,
+                        details.amount2
+                    ];
+                }
 
                 paymentMethodID = payload.paymentMethodID;
             }
