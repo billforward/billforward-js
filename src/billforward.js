@@ -1209,7 +1209,7 @@
 
                 payload = {};
 
-                if($form) {
+                if (self.transaction.formElementCandidate) {
                     payload = {
                         accountID: bfjs.core.getFormValue("accountID", $form),
                         routingNumber: bfjs.core.getFormValue("routingNumber", $form),
@@ -1218,7 +1218,8 @@
                         holderName: bfjs.core.getFormValue("holderName", $form),
                         bankAccountName: bfjs.core.getFormValue("bankAccountName", $form),
                         accountHolderType: bfjs.core.getFormValue("accountHolderType", $form),
-                        organizationID: self.transaction.bfjs.state.api.organizationID
+                        organizationID: self.transaction.bfjs.state.api.organizationID,
+                        defaultPaymentMethod: bfjs.core.getFormValue("use-as-default-payment-method", $form)
                     };
                 }
             }
@@ -1242,7 +1243,7 @@
                     );
                 })
                 .always(function() {
-                    if($form) {
+                    if (self.transaction.formElementCandidate) {
                         $form.find("button[type=submit]").prop("disabled", false);
                     }
                 });
@@ -1302,7 +1303,7 @@
                 paymentMethodID = bfjs.core.getFormValue("paymentMethodID", $form);
             }
 
-            console.log(payload);
+            // console.log(payload);
 
             if (!paymentMethodID) {
                 throw "Field 'paymentMethodID' cannot be null";
@@ -2918,6 +2919,9 @@
     };
 
     bfjs.core.valueFromFormInput = function($formInput) {
+        if ($formInput.attr('type') === "checkbox") {
+            return $formInput.is(':checked');
+        }
         return $formInput.val();
     };
 

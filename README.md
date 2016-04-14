@@ -754,7 +754,7 @@ This step creates an unverified bank account on both Stripe and BillForward back
     <div class="form-row">
         <label>
             <span>Make Default</span>
-            <input type="checkbox" bf-data="defaultPaymentMethod" />
+            <input type="checkbox" bf-data="use-as-default-payment-method" />
         </label>
     </div>
 
