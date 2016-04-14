@@ -1240,7 +1240,7 @@
                 }
             }
 
-            if(!payload.accountID) {
+            if (!payload.accountID) {
                 payload.accountID = self.transaction.accountID;
             }
 
@@ -1257,8 +1257,8 @@
                         self.jqXHRErrorToBFJSError(resp, msg, err, "other")
                     );
                 })
-                .always(function() {
-                    if(self.transaction.formElementCandidate) {
+                .always(function () {
+                    if (self.transaction.formElementCandidate) {
                         var $form = $(self.transaction.formElementCandidate);
                         $form.find("button[type=submit]").prop("disabled", false);
                     }
