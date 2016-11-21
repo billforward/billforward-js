@@ -2832,27 +2832,21 @@
     };
 
     bfjs.grabScripts = function() {
-        function attemptLoadUsingRequire(actor) {
+        function attemptLoadBraintreeUsingRequire(actor) {
             // catch RequireJS-loaded dependency
             if ("function" == typeof define && define.amd) {
                 if ("function" == typeof require) {
                     var paths = {};
                     paths[actor.depName] = actor.depUrlRequire;
 
-                    // console.log(actor);
-
                     require.config({
                         paths: paths,
                         shim: actor.requireShim
                     });
-                    require([actor.depName], function(dependency) {
+                    require(['braintree'], function(dependency) {
                         if ("function" == typeof dependency) {
-                            actor.depObj = dependency();
-                        } else {
-                            actor.depObj = dependency;
+                            dependency();
                         }
-                        // console.log(actor.depObj);
-                        // console.log(actor);
                         actor.depObj = dependency;
                         actor.loadedCallback.call(actor);
                     });
@@ -2902,7 +2896,7 @@
                         loadedCallback = actor.loadedCallback;
 
                         // catch RequireJS-loaded Braintree
-                        if (attemptLoadUsingRequire(braintreeActor)) {
+                        if (attemptLoadBraintreeUsingRequire(braintreeActor)) {
                             continue;
                         }
                     }
