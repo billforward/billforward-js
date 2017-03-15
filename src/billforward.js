@@ -484,16 +484,22 @@
                 payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
-            return {
+            var uriParams = auth === undefined ? "" : "?" + $.param({ access_token: auth });
+
+            var ajaxConfig = {
                 type: "POST",
-                url: fullURL+"?"+$.param({
-                    'access_token': auth
-                }),
+                url: fullURL + uriParams,
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
                 crossDomain: true,
                 async: true
             };
+
+            if (auth === undefined) { // assume session is used
+                ajaxConfig["xhrFields"] = { withCredentials: true };
+            }
+
+            return ajaxConfig;
         };
 
         p.checkIfTransportShimNecessary = function() {
