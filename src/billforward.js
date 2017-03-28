@@ -339,6 +339,40 @@
         return TheClass;
     })();
 
+    bfjs.WorldpayGateway = (function() {
+        var TheClass = function() {
+            // statics
+            this.key = 'worldpay';
+            this.depUrl = "https://cdn.worldpay.com/v1/worldpay.js";
+            this.depUrlRequire = "https://cdn.worldpay.com/v1/worldpay.js";
+            this.depName = "Worldpay";
+            this.depObj = null;
+            this.requireShim = {};
+            // this.requireShim[this.depName] = {
+            //   "exports": "Stripe"
+            // };
+        };
+
+        var p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -2797,6 +2831,265 @@
         return TheClass;
     })();
 
+    bfjs.WorldpayTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+            'cardholder-name': 'name',
+            'cvc': 'cvc',
+            'number': 'number',
+            'exp-month': 'exp_month',
+            'exp-year': 'exp_year',
+            'exp-date': 'exp_date', // not supported in Stripe; we cheat
+            'address-line1': 'address_line1',
+            'address-line2': 'address_line2',
+            'address-city': 'address_city',
+            'address-province': 'address_state',
+            'address-zip': 'address_zip',
+            'address-country': 'address_country',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod'
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            var payload = {
+                "@type": "WorldpayPreAuthRequest",
+                "gateway": "Worldpay"
+            }
+
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            this.preAuthRequestPayload = payload;
+
+            // ready to do pageLoadDo
+            this.pageLoadDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
+            var worldpayClient
+            Key;
+            var failed = false;
+            try {
+                worldpayClient
+                Key = data.results[0].clientKey;
+                if (!data.results[0].clientKey) {
+                    failed = true;
+                }
+            } catch (e){
+                failed = true;
+            }
+
+            if (failed) {
+                return this.ultimateFailure({
+                    code: 2010,
+                    message: "Preauthorization failed. Response received, but expected information was absent.",
+                    detailObj: data
+                });
+            }
+
+            // This identifies your website in the createToken call below
+            Stripe.setPublishableKey(worldpayClient
+                Key);
+
+            var tokenInfo = {};
+
+            var resolvedValues = (function(mappings) {
+                var map = {};
+
+                for (var i in mappings) {
+                    var mapping = mappings[i];
+                    var valueFromForm;
+                    valueFromForm = this.transaction.state.cardDetails
+                    ? this.transaction.state.cardDetails[i]
+                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+
+                    map[i] = valueFromForm;
+                }
+
+                return map;
+            })
+            .call(this, TheClass.mappings);
+
+            var setKeyToVal = function(key, value) {
+                tokenInfo[TheClass.mappings[key]] = value;
+            };
+
+            for (var i in TheClass.mappings) {
+                var mapping = TheClass.mappings[i];
+                var valueFromForm = resolvedValues[i];
+
+                var doDefault = function() {
+                    setKeyToVal(i, valueFromForm);
+                };
+
+                if (valueFromForm) {
+                    switch (i) {
+                        case 'exp-date':
+                            var parts = valueFromForm.split("/");
+                            var month = parts[0];
+                            var year = parts[1];
+                            setKeyToVal('exp-month', month);
+                            setKeyToVal('exp-year', year);
+                            break;
+                        case 'exp-month':
+                        case 'exp-year':
+                            // concede fealty
+                            if (resolvedValues['exp-date']) break;
+                            doDefault(); break;
+                        case 'name-last': break;
+                        case 'name-first':
+                            if (!resolvedValues['cardholder-name']) {
+                                // we'll have to build it from first and last
+                                var cardHolderName = [
+                                resolvedValues['name-first'],
+                                resolvedValues['name-last']
+                                ].join(" ");
+
+                                setKeyToVal('cardholder-name', cardHolderName);
+                            }
+                            break;
+                        default:
+                            doDefault();
+                    }
+                }
+            }
+
+            var self = this;
+
+            Stripe.card.createToken(tokenInfo, function() {
+                self.gatewayResponseHandler.apply(self, arguments);
+            });
+        };
+
+        function transformStripeJsErrorToBfjsError(stripeResponse) {
+            var bfjsError = {
+                code: 3000,
+                message: "Card capture failed.",
+                detailObj: stripeResponse
+            };
+
+            // Stripe's error messages are actually very nice
+            // so let's use those
+            // also note that multiple Stripe errors (with differing messages) can share the same code
+            // so again: Stripe's message text is required for the full story.
+            var stripeError = stripeResponse.error;
+            switch(stripeError.type) {
+                case "card_error":
+                switch (stripeError.code) {
+                    case "invalid_expiry_year":
+                    bfjsError.code = 3311;
+                    // bfjsError.message = "Card's expiry year is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    case "invalid_expiry_month":
+                    bfjsError.code = 3312;
+                    // bfjsError.message = "Card's expiry month is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    case "invalid_cvc":
+                    bfjsError.code = 3320;
+                    // bfjsError.message = "Card's Security code (CVC) is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    default:
+                    bfjsError.code = 3300;
+                    bfjsError.message = stripeError.message;
+                }
+                break;
+                default:
+                // we've no knowledge of any other type of error than card_error
+                // however, their message will likely still be better than our generic apology.
+                bfjsError.message = stripeError.message;
+            }
+
+            return bfjsError;
+        }
+
+        p.gatewayResponseHandler = function(status, response) {
+            if (response.error) {
+                var bfjsError = transformStripeJsErrorToBfjsError(response)
+
+                // Show the errors on the form
+                this.ultimateFailure(bfjsError);
+            } else {
+                // token contains id, last4, and card type
+                var token = response.id;
+                var card = response.card;
+
+                var payload = {
+                    "@type": 'StripeAuthCaptureRequest',
+                    "gateway": "Stripe",
+                    "stripeToken": token,
+                    "cardID": card.id,
+                    "accountID": this.transaction.accountID
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                            case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
+                    }
+
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                // and re-submit
+                this.doAuthCapture(payload);
+            }
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -2807,7 +3100,8 @@
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
         'sagepay': bfjs.SagePayGateway.construct(),
-        'payvision': bfjs.PayVisionGateway.construct()
+        'payvision': bfjs.PayVisionGateway.construct(),
+        'worldpay':bfjs.WorldpayGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
@@ -2817,7 +3111,8 @@
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
         'sagepay': bfjs.SagePayTransaction,
-        'payvision': bfjs.PayVisionTransaction
+        'payvision': bfjs.PayVisionTransaction,
+        'worldpay': bfjs.WorldpayTransaction
     };
 
     bfjs.lateActors = [
@@ -2826,7 +3121,8 @@
         bfjs.gatewayInstances['braintree'],
         bfjs.gatewayInstances['generic'],
         bfjs.gatewayInstances['sagepay'],
-        bfjs.gatewayInstances['payvision']
+        bfjs.gatewayInstances['payvision'],
+        bfjs.gatewayInstances['worldpay']
     ];
 
     bfjs.state = {
@@ -3193,6 +3489,7 @@
                 case 'generic':
                 case 'sagepay':
                 case 'payvision':
+                case 'worldpay':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
