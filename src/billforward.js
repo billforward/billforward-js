@@ -125,6 +125,8 @@
             // this.requireShim[this.depName] = {
             //   "exports": "Stripe"
             // };
+            this.useApplePay = false;
+            this.applePaySettings = {};
         };
 
         var p = TheClass.prototype = new bfjs.GatewayActor();
@@ -981,34 +983,60 @@
             this.pageLoadDancer.loadedCallback();
         };
 
-        p.startAuthCapture = function(data) {
+        p.oncePreAuthed = function() {
+            var data = this.preAuthResponsePayload;
             var stripePublishableKey;
-            var failed = false;
+            var stripeAccountID;
             try {
                 stripePublishableKey = data.results[0].publicKey;
-                if (!data.results[0].publicKey) {
-                    failed = true;
+                if (!stripePublishableKey) {
+                    throw new Error("No public key found in pre-auth response.");
+                }
+                stripeAccountID = data.results[0].stripeAccountID;
+                if (this.myGateway.useApplePay && !stripeAccountID) {
+                    throw new Error("No Stripe Account ID key found in pre-auth response. This is required for Apple Pay.");
                 }
             } catch (e){
-                failed = true;
-            }
-
-            if (failed) {
                 return this.ultimateFailure({
                     code: 2010,
                     message: "Preauthorization failed. Response received, but expected information was absent.",
                     detailObj: data
                 });
             }
-            // This identifies your website in the createToken call below
 
-            /*if (typeof Stripe !== 'undefined') {
-                this.myGateway.depObj = Stripe;
-            }*/
-
-            var stripePublishableKey = data.results[0].publicKey;
             Stripe.setPublishableKey(stripePublishableKey);
 
+            var self = this;
+            if (this.myGateway.useApplePay) {
+                function beginApplePay() {
+                    // user currently needs to invoke .begin()
+                    return Stripe.applePay.buildSession(
+                        self.myGateway.applePaySettings.paymentRequest,
+                        function(result, completion) {
+                            completion(ApplePaySession.STATUS_SUCCESS);
+                            self.gatewayResponseHandler(200, {
+                                id: result.token.id,
+                                card: result.token.card
+                            });
+
+                        }, function(error) {
+                            completion(ApplePaySession.STATUS_FAILURE);
+                            self.gatewayResponseHandler(402, {
+                                error: error
+                            });
+                        });
+                }
+
+                Stripe.applePay.stripeAccount = stripeAccountID;
+                Stripe.applePay.checkAvailability(function(available) {
+                    self.myGateway.applePaySettings.handleApplePayAvailability(available, beginApplePay);
+                });
+            }
+
+            this.submitDancer.loadedCallback();
+        };
+
+        p.startAuthCapture = function(data) {
             var tokenInfo = {};
 
             var resolvedValues = (function(mappings) {
@@ -3074,6 +3102,44 @@
         bfjs.state.api.token = token;
         bfjs.state.api.organizationID = organizationID;
         bfjs.core.hasBfCredentials = true;
+    };
+
+    /**
+     * @typedef {Object} paymentRequest
+     * @property {String} countryCode - Two-letter ISO 3166 country code of the merchant (you).
+     * @property {String} currencyCode - Three-letter ISO 4217 currency code for the transaction.
+     * @property {Object} total - Information about the transaction, to be presented by Apple Pay to your customer.
+     * @property {String} total.label - Name of your business
+     * @property {String} total.amount - Monetary value of the transaction. This is a required field, even though we are not capturing funds. Any price is fine; the amount will not actually be charged. Please provide as a currency string, for example '19.99'.
+     * @see https://developer.apple.com/reference/applepayjs/paymentRequest
+     * @see https://stripe.com/docs/apple-pay/web
+     */
+    /**
+     * @typedef {Function} BeginApplePay
+     * @returns ApplePaySession
+     * @see https://developer.apple.com/reference/applepayjs/applepaysession
+     * @see https://stripe.com/docs/apple-pay/web
+     */
+    /**
+     * @callback ApplePayIsAvailable
+     * @param {boolean} available - If true: you should show your Apple Pay button, and configure it to invoke `beginApplePay()` when clicked.
+     * @param {BeginApplePay} beginApplePay - you should invoke this when your customer clicks your Apple Pay button.
+     */
+    /**
+     * @typedef {Object} ApplePaySettings
+     * @property {ApplePayIsAvailable} handleApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
+     * @property {paymentRequest} paymentRequest - your payment request, which we will send to Apple Pay upon successful card capture
+     */
+    /**
+     * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
+     */
+    bfjs.addApplePayButton = function(applePaySettings) {
+        applePaySettings = applePaySettings || {};
+        applePaySettings.handleApplePayAvailability = applePaySettings.handleApplePayAvailability || function() {};
+        applePaySettings.paymentRequest = applePaySettings.paymentRequest || {};
+        // supported for Stripe only
+        bfjs.gatewayInstances['stripe'].useApplePay = true;
+        bfjs.gatewayInstances['stripe'].applePaySettings = applePaySettings;
     };
 
     bfjs.addPayPalButton = function(selector, onPaymentMethodReceived, handlePayPalFetchBegin, handlePayPalReady, handlePayPalLoaded, braintreeOptionsObj) {
