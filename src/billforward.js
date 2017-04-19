@@ -1000,7 +1000,10 @@
                 return this.ultimateFailure({
                     code: 2010,
                     message: "Preauthorization failed. Response received, but expected information was absent.",
-                    detailObj: data
+                    detailObj: {
+                        error: e,
+                        apiResponse: data
+                    }
                 });
             }
 
@@ -1028,8 +1031,9 @@
                 }
 
                 Stripe.applePay.stripeAccount = stripeAccountID;
+                this.myGateway.applePaySettings.onApplePayBegunCheckingAvailability();
                 Stripe.applePay.checkAvailability(function(available) {
-                    self.myGateway.applePaySettings.handleApplePayAvailability(available, beginApplePay);
+                    self.myGateway.applePaySettings.onApplePayAvailability(available, beginApplePay);
                 });
             }
 
@@ -3121,13 +3125,14 @@
      * @see https://stripe.com/docs/apple-pay/web
      */
     /**
-     * @callback ApplePayIsAvailable
+     * @callback ApplePayAvailability
      * @param {boolean} available - If true: you should show your Apple Pay button, and configure it to invoke `beginApplePay()` when clicked.
      * @param {BeginApplePay} beginApplePay - you should invoke this when your customer clicks your Apple Pay button.
      */
     /**
      * @typedef {Object} ApplePaySettings
-     * @property {ApplePayIsAvailable} handleApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
+     * @property {Function} onApplePayBegunCheckingAvailability - This event is fired to help you show detailed loading progress. It implies that Stripe.js has loaded, that we have successfully grabbed Stripe credentials from BillForward, that we have inited Stripe.js with those credentials, and that we are about to check whether Apple Pay is available.
+     * @property {ApplePayAvailability} onApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
      * @property {paymentRequest} paymentRequest - your payment request, which we will send to Apple Pay upon successful card capture
      */
     /**
@@ -3135,7 +3140,8 @@
      */
     bfjs.addApplePayButton = function(applePaySettings) {
         applePaySettings = applePaySettings || {};
-        applePaySettings.handleApplePayAvailability = applePaySettings.handleApplePayAvailability || function() {};
+        applePaySettings.onApplePayBegunCheckingAvailability = applePaySettings.onApplePayBegunCheckingAvailability || function() {};
+        applePaySettings.onApplePayAvailability = applePaySettings.onApplePayAvailability || function() {};
         applePaySettings.paymentRequest = applePaySettings.paymentRequest || {};
         // supported for Stripe only
         bfjs.gatewayInstances['stripe'].useApplePay = true;
