@@ -645,6 +645,8 @@
               * 3312 ----- Invalid expiry month
                 332x --- Invalid Security Code (CVC)
               * 3320 ----- (Generic)
+                34xx - Invalid request
+              * 3400 --- (Generic)
 
             Server-side scrutinization of token from gateway:
                 50xx - Verification failed
@@ -1016,17 +1018,16 @@
                     return Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
-                            completion(ApplePaySession.STATUS_SUCCESS);
                             self.gatewayResponseHandler(200, {
                                 id: result.token.id,
                                 card: result.token.card
                             });
-
+                            completion(ApplePaySession.STATUS_SUCCESS);
                         }, function(error) {
-                            completion(ApplePaySession.STATUS_FAILURE);
                             self.gatewayResponseHandler(402, {
                                 error: error
                             });
+                            completion(ApplePaySession.STATUS_FAILURE);
                         });
                 }
 
@@ -1139,6 +1140,10 @@
                     case "invalid_cvc":
                     bfjsError.code = 3320;
                     // bfjsError.message = "Card's Security code (CVC) is invalid.";
+                    bfjsError.message = stripeError.message;
+                    break;
+                    case "invalid_request_error":
+                    bfjsError.code = 3400;
                     bfjsError.message = stripeError.message;
                     break;
                     default:

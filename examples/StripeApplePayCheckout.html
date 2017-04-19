@@ -32,6 +32,7 @@
 
 			// This is purely for providing loading feedback to the customer (or developer).
 			function onApplePayBegunCheckingAvailability() {
+				log('info', 'Checking Apple Pay availability...');
 				// successfully loaded Stripe.js
 				// successfully grabbed Stripe credentials from BillForward
 				// about to check whether Apple Pay is available.
@@ -41,6 +42,7 @@
 			function onApplePayAvailability(available, beginApplePay) {
 				$('.applepay-preparing').css('display', 'none');
 				if (available) {
+					log('info', 'Apple Pay is available on this device.');
 					// reveal Apple Pay button
 					$('.applepay-available').css('display', 'block');
 
@@ -60,7 +62,7 @@
 			}
 
 			var paymentRequest = {
-				countryCode: 'UK',
+				countryCode: 'GB',
 				currencyCode: 'GBP',
 				total: {
 					label: 'Successful Business',
@@ -119,7 +121,6 @@
         	display: none;
         }
         #apple-pay-button {
-			display: none;
 			background-color: black;
 			background-image: -webkit-named-image(apple-pay-logo-white);
 			background-size: 100% 100%;
@@ -142,6 +143,10 @@
 		#success-log {
 			color: darkblue;
 		}
+
+		pre {
+			overflow-wrap: break-word;
+		}
     	</style>
 	</head>
 
@@ -151,9 +156,8 @@
 				Checking Apple Pay availability...
 			</div>
 			<div class="applepay-available">
-				<button type="submit" disabled="true" id="apple-pay-button" aria-label="Buy with Apple Pay">Buy with Apple Pay</button>
+				<button type="button" disabled="true" id="apple-pay-button" aria-label="Buy with Apple Pay"></button>
 			</div>
-
 			<div class="form-row">
 				<label>
 					<span>Card Number</span>
@@ -174,7 +178,7 @@
 					<input type="text" size="2" bf-data="exp-month" value="01"/>
 				</label>
 				<span> / </span>
-				<input type="text" size="4" bf-data="exp-year" value="2016"/>
+				<input type="text" size="4" bf-data="exp-year" value="2018"/>
 			</div>
 
 			<button type="submit" disabled="true">Submit Payment</button>
