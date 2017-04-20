@@ -1070,6 +1070,11 @@
         p.startAuthCapture = function(data) {
             var tokenInfo = {};
 
+            // if someone submits the card form: disable Apple Pay flow whilst we are pursue the general flow.
+            if (this.myGateway.useApplePay) {
+                this.myGateway.applePaySettings.disableApplePayButton();
+            }
+
             var resolvedValues = (function(mappings) {
                 var map = {};
 

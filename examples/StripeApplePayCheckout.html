@@ -93,35 +93,48 @@
 					console.error(error);
 					log('error', error.message, true);
         			$(formSelector).find('button[type=submit]').prop('disabled', false);
+        			enableApplePayButton();
 				} else {
 					console.log(paymentMethod);
 
 					$('#success-log').html("Created payment method with ID: '"+paymentMethod.id+"'\nFor account with ID: \t\t'"+paymentMethod.accountID+"'").wrap('<pre />');
 
 					// uncomment the following if you want to post the result to your backend immediately
-					/*
-			        var addPostVariable = function(varName, value) {
-			        	// add as 'hidden' form variables those values we wish to submit
-			            $(formSelector).append($('<input type="hidden" name="'+varName+'" />').val(value));
-			        }
-
-			        var postVars = {
-						accountID: paymentMethod.accountID,
-						paymentMethodID: paymentMethod.id
-					};
-
-			        for (var i in postVars) {
-			            addPostVariable(i, postVars[i]);
-			        }
-
-			        $(formSelector).attr("action", "handlePayment.php");
-			        $(formSelector).attr("method", "POST");
-
-			        // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
-			        $(formSelector).get(0).submit();
-			        */
+					// sendPaymentMethod(paymentMethod);
 				}
 			};
+
+			/**
+			 * Example function to POST the succesfully-captured PaymentMethod to another page
+			 * Your flow may not require this.
+			 */
+			function sendPaymentMethod(paymentMethod) {
+				var fragment = document.createDocumentFragment()
+				var form = document.createElement('form');
+				form.style.display = 'none';
+				form.setAttribute("method", "POST");
+				form.setAttribute("action", "handlePayment.php");
+
+				function addPostVariable(varName, value) {
+		        	// add as 'hidden' form variables those values we wish to submit
+		            $(form).append($('<input type="hidden" name="'+varName+'" />').val(value));
+		        }
+
+		        var postVars = {
+					accountID: paymentMethod.accountID,
+					paymentMethodID: paymentMethod.id
+				};
+
+				Object.keys(postVars).forEach(function(key) {
+					addPostVariable(key, postVars[key]);
+				});
+
+				fragment.appendChild(form);
+				document.body.appendChild(fragment);
+
+		        // submits POST variables 'accountID' and 'paymentMethodID' to your 'handlePayment.php'
+		        $(form).get(0).submit();
+			}
         </script>
 
         <style type="text/css">
@@ -132,6 +145,7 @@
         	display: none;
         }
         #apple-pay-button {
+			border-color: black;
 			background-color: black;
 			background-image: -webkit-named-image(apple-pay-logo-white);
 			background-size: 100% 100%;
@@ -142,8 +156,9 @@
 			padding: 10px 0;
 			border-radius: 10px;
 		}
-		#apple-pay-button[disabled=true] {
-			background-color: red;
+		#apple-pay-button[disabled] {
+			border-color: grey;
+			background-color: grey;
 		}
 
 		#error-log {
