@@ -61,6 +61,15 @@
 				}
 			}
 
+			function enableApplePayButton() {
+				$('#apple-pay-button').prop('disabled', false);
+				log('info', 'Enabled Apple Pay button.');
+			}
+			function disableApplePayButton() {
+				$('#apple-pay-button').prop('disabled', true);
+				log('info', 'Disabled Apple Pay button.');
+			}
+
 			var paymentRequest = {
 				countryCode: 'GB',
 				currencyCode: 'GBP',
@@ -73,7 +82,9 @@
 			BillForward.addApplePayButton({
 				onApplePayBegunCheckingAvailability: onApplePayBegunCheckingAvailability,
 				onApplePayAvailability: onApplePayAvailability,
-				paymentRequest: paymentRequest
+				paymentRequest: paymentRequest,
+				disableApplePayButton: disableApplePayButton,
+				enableApplePayButton: enableApplePayButton
 			});
 			BillForward.captureCardOnSubmit(formSelector, 'stripe', accountID, callback);
 
@@ -81,7 +92,7 @@
 				if (error) {
 					console.error(error);
 					log('error', error.message, true);
-        			$(formSelector).find('button').prop('disabled', false);
+        			$(formSelector).find('button[type=submit]').prop('disabled', false);
 				} else {
 					console.log(paymentMethod);
 
@@ -130,6 +141,9 @@
 			height: 44px;
 			padding: 10px 0;
 			border-radius: 10px;
+		}
+		#apple-pay-button[disabled=true] {
+			background-color: red;
 		}
 
 		#error-log {

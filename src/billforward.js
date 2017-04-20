@@ -425,7 +425,7 @@
 
                     function onSubmit(event) {
                         // Disable the submit button to prevent repeated clicks
-                        $(this).find('button').prop('disabled', true);
+                        $(this).find('button[type=submit]').prop('disabled', true);
 
                         event.preventDefault();
                         event.stopPropagation();
@@ -437,7 +437,7 @@
                     $formElement.on('submit', onSubmit);
 
                     // ready to go
-                    $formElement.find('button').prop('disabled', false);
+                    $formElement.find('button[type=submit]').prop('disabled', false);
                 });
             }
         };
@@ -1015,7 +1015,7 @@
             if (this.myGateway.useApplePay) {
                 function beginApplePay() {
                     // user currently needs to invoke .begin()
-                    return Stripe.applePay.buildSession(
+                    var session = Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
                             self.gatewayResponseHandler(200, {
@@ -1029,11 +1029,40 @@
                             });
                             completion(ApplePaySession.STATUS_FAILURE);
                         });
+
+                    var originalBegin = session.begin;
+                    // monkey-patch session.begin() to also disable the manual card capture form
+                    session.begin = function() {
+                        $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                        originalBegin.apply(this, arguments);
+                        self.myGateway.applePaySettings.disableApplePayButton();
+                    };
+
+                    var originalCancel = session.oncancel;
+                    // monkey-patch session.oncancel to also re-enable the manual card capture form
+                    Object.defineProperty(session, 'oncancel', {
+                        set: function(value) {
+                            this.oncancel = function() {
+                                $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                originalCancel.apply(this, arguments);
+                                self.myGateway.applePaySettings.enableApplePayButton();
+                            };
+                        }
+                    });
+                    // session.oncancel = function() {
+                    //     $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                    //     originalCancel.apply(this, arguments);
+                    //     self.myGateway.applePaySettings.enableApplePayButton();
+                    // };
+                    return session;
                 }
 
                 Stripe.applePay.stripeAccount = stripeAccountID;
                 this.myGateway.applePaySettings.onApplePayBegunCheckingAvailability();
                 Stripe.applePay.checkAvailability(function(available) {
+                    if (available) {
+                        self.myGateway.applePaySettings.enableApplePayButton();
+                    }
                     self.myGateway.applePaySettings.onApplePayAvailability(available, beginApplePay);
                 });
             }
@@ -3139,6 +3168,8 @@
      * @property {Function} onApplePayBegunCheckingAvailability - This event is fired to help you show detailed loading progress. It implies that Stripe.js has loaded, that we have successfully grabbed Stripe credentials from BillForward, that we have inited Stripe.js with those credentials, and that we are about to check whether Apple Pay is available.
      * @property {ApplePayAvailability} onApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
      * @property {paymentRequest} paymentRequest - your payment request, which we will send to Apple Pay upon successful card capture
+     * @property {Function} disableApplePayButton - This event is fired whenever we recommend that you disable your Apple Pay button (i.e. to prevent a user from retrying card capture whilst a request is in-flight).
+     * @property {Function} enableApplePayButton - This event is fired whenever we recommend that you enable your Apple Pay button (i.e. to enable a user to retry card capture once there are no requests is in-flight).
      */
     /**
      * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
@@ -3148,6 +3179,8 @@
         applePaySettings.onApplePayBegunCheckingAvailability = applePaySettings.onApplePayBegunCheckingAvailability || function() {};
         applePaySettings.onApplePayAvailability = applePaySettings.onApplePayAvailability || function() {};
         applePaySettings.paymentRequest = applePaySettings.paymentRequest || {};
+        applePaySettings.disableApplePayButton = applePaySettings.disableApplePayButton || function() {};
+        applePaySettings.enableApplePayButton = applePaySettings.enableApplePayButton || function() {};
         // supported for Stripe only
         bfjs.gatewayInstances['stripe'].useApplePay = true;
         bfjs.gatewayInstances['stripe'].applePaySettings = applePaySettings;
