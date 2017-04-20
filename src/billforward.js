@@ -1030,31 +1030,28 @@
                             completion(ApplePaySession.STATUS_FAILURE);
                         });
 
-                    var originalBegin = session.begin;
+                    var forwardingSession = new Object();
+                    forwardingSession.prototype = session;
+
                     // monkey-patch session.begin() to also disable the manual card capture form
-                    session.begin = function() {
+                    forwardingSession.begin = function() {
                         $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
-                        originalBegin.apply(this, arguments);
                         self.myGateway.applePaySettings.disableApplePayButton();
+                        return this.prototype.begin.apply(this.prototype, arguments);
                     };
 
-                    var originalCancel = session.oncancel;
                     // monkey-patch session.oncancel to also re-enable the manual card capture form
-                    Object.defineProperty(session, 'oncancel', {
+                    Object.defineProperty(forwardingSession, 'oncancel', {
                         set: function(value) {
-                            this.oncancel = function() {
+                            var proto = this.prototype;
+                            this.prototype.oncancel = function() {
                                 $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
-                                originalCancel.apply(this, arguments);
                                 self.myGateway.applePaySettings.enableApplePayButton();
-                            };
+                                return value.apply(proto, arguments);
+                            }
                         }
                     });
-                    // session.oncancel = function() {
-                    //     $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
-                    //     originalCancel.apply(this, arguments);
-                    //     self.myGateway.applePaySettings.enableApplePayButton();
-                    // };
-                    return session;
+                    return forwardingSession;
                 }
 
                 Stripe.applePay.stripeAccount = stripeAccountID;
