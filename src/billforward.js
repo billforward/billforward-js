@@ -1035,7 +1035,9 @@
 
                     // monkey-patch session.begin() to also disable the manual card capture form
                     forwardingSession.begin = function() {
-                        $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                        if (!self.transaction.state.cardDetails) {
+                            $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                        }
                         self.myGateway.applePaySettings.disableApplePayButton();
                         return this.prototype.begin.apply(this.prototype, arguments);
                     };
@@ -1045,7 +1047,9 @@
                         set: function(value) {
                             var proto = this.prototype;
                             this.prototype.oncancel = function() {
-                                $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                if (!self.transaction.state.cardDetails) {
+                                    $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                }
                                 self.myGateway.applePaySettings.enableApplePayButton();
                                 return value.apply(proto, arguments);
                             }
