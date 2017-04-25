@@ -839,6 +839,9 @@
         p.ultimateSuccess = function(paymentMethod) {
             //console.log(paymentMethod);
             this.transaction.callback(paymentMethod, false);
+            if ('undefined' !== typeof this.transaction.afterUltimateSuccess) {
+                this.transaction.afterUltimateSuccess();
+            }
         };
 
         p.ultimateFailure = function(reason) {
@@ -849,6 +852,9 @@
                 this.submitDanceBegun = false;
             }*/
             this.transaction.callback(null, reason);
+            if ('undefined' !== typeof this.transaction.afterUltimateFailure) {
+                this.transaction.afterUltimateFailure();
+            }
         };
 
         return TheClass;
@@ -1013,21 +1019,34 @@
 
             var self = this;
             if (this.myGateway.useApplePay) {
+                this.transaction.responsibleForDispellingApplePayDialog = true;
+
                 function beginApplePay() {
                     // user currently needs to invoke .begin()
                     var session = Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
-                            self.gatewayResponseHandler(200, {
-                                id: result.token.id,
-                                card: result.token.card
-                            });
-                            completion(ApplePaySession.STATUS_SUCCESS);
+                            this.transaction.dispelApplePayDialog = completion;
+                            function sendTokenToBF(result) {
+                                self.gatewayResponseHandler(200, {
+                                    id: result.token.id,
+                                    card: result.token.card
+                                });
+                            }
+                            if ('undefined' === typeof self.myGateway.applePaySettings.onPaymentAuthorized) {
+                                sendTokenToBF(result);
+                            } else {
+                                self.transaction.responsibleForDispellingApplePayDialog = false;
+                                self.myGateway.applePaySettings.onPaymentAuthorized(
+                                    result,
+                                    completion,
+                                    sendTokenToBF
+                                    );
+                            }
                         }, function(error) {
                             self.gatewayResponseHandler(402, {
                                 error: error
                             });
-                            completion(ApplePaySession.STATUS_FAILURE);
                         });
 
                     var forwardingSession = new Object();
@@ -1241,6 +1260,20 @@
 
                 // and re-submit
                 this.doAuthCapture(payload);
+            }
+        };
+
+        p.afterUltimateSuccess = function() {
+            if (this.myGateway.useApplePay
+                && this.transaction.responsibleForDispellingApplePayDialog) {
+                this.transaction.dispelApplePayDialog(ApplePaySession.STATUS_SUCCESS);
+            }
+        };
+
+        p.afterUltimateFailure = function() {
+            if (this.myGateway.useApplePay
+                && this.transaction.responsibleForDispellingApplePayDialog) {
+                this.transaction.dispelApplePayDialog(ApplePaySession.STATUS_FAILURE);
             }
         };
 
@@ -3165,17 +3198,38 @@
      * @see https://stripe.com/docs/apple-pay/web
      */
     /**
-     * @callback ApplePayAvailability
+     * @typedef {Function} ApplePayAvailability
      * @param {boolean} available - If true: you should show your Apple Pay button, and configure it to invoke `beginApplePay()` when clicked.
      * @param {BeginApplePay} beginApplePay - you should invoke this when your customer clicks your Apple Pay button.
      */
     /**
+     * @typedef {any} ApplePaySession
+     * This is an enum which will be available on your `window` object when Apple Pay is available. Allowed values:
+     * ApplePaySession.STATUS_SUCCESS
+     * ApplePaySession.STATUS_FAILURE
+     */
+    /**
+     * @typedef {Function} CompleteApplePaySession
+     * @param {ApplePaySession} status - Session outcome which Apple Pay should present to the user.
+     */
+    /**
+     * @typedef {Function} SubmitStripeTokenToBillForward
+     * @param {Object} result - Result of card capture. Contains Stripe Token and Card.
+     */
+    /**
+     * @typedef {Function} PaymentAuthorized
+     * @param {Object} result - Result of card capture. Contains Stripe Token and Card.
+     * @param {CompleteApplePaySession} completion - Dispels the Apple Pay dialog. Invoke this when you want to return interaction to the user. Usually you should invoke this when the ultimate outcome of the card capture flow ("did I successfully create a new PaymentMethod in BillForward?") is known. But there are situations where you may need to prematurely tell the user "it succeeded" -- for example if you need them to fill in other parts of the form (e.g. accept terms & conditions) before submitting the Stripe token to BillForward.
+     * @param {SubmitStripeTokenToBillForward} submitToBillForward - Submits the Stripe token to BillForward. Invoke this when all interactions required of the user have completed, and you would like to send the Stripe token to BillForward to create a PaymentMethod.
+     */
+    /**
      * @typedef {Object} ApplePaySettings
-     * @property {Function} onApplePayBegunCheckingAvailability - This event is fired to help you show detailed loading progress. It implies that Stripe.js has loaded, that we have successfully grabbed Stripe credentials from BillForward, that we have inited Stripe.js with those credentials, and that we are about to check whether Apple Pay is available.
-     * @property {ApplePayAvailability} onApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
      * @property {paymentRequest} paymentRequest - your payment request, which we will send to Apple Pay upon successful card capture
-     * @property {Function} disableApplePayButton - This event is fired whenever we recommend that you disable your Apple Pay button (i.e. to prevent a user from retrying card capture whilst a request is in-flight).
-     * @property {Function} enableApplePayButton - This event is fired whenever we recommend that you enable your Apple Pay button (i.e. to enable a user to retry card capture once there are no requests is in-flight).
+     * @property {ApplePayAvailability} onApplePayAvailability - your callback, which we will invoke once we know whether Apple Pay is available.
+     * @property {Function} onApplePayBegunCheckingAvailability - [Optional] This event is fired to help you show detailed loading progress. It implies that Stripe.js has loaded, that we have successfully grabbed Stripe credentials from BillForward, that we have inited Stripe.js with those credentials, and that we are about to check whether Apple Pay is available.
+     * @property {Function} disableApplePayButton - [Optional] This event is fired whenever we recommend that you disable your Apple Pay button (i.e. to prevent a user from retrying card capture whilst a request is in-flight).
+     * @property {Function} enableApplePayButton - [Optional] This event is fired whenever we recommend that you enable your Apple Pay button (i.e. to enable a user to retry card capture once there are no requests is in-flight).
+     * @property {PaymentAuthorized} onPaymentAuthorized - [Optional] This event is fired when Stripe.js successfully receives a token from the Apple Pay user (but _before_ sending the Stripe token to BillForward). If you do not override this, we will automatically send the Stripe token to BillForward. Override this if you would like to do anything (such as returning interaction to the user so that they can complete a form) before sending the token to BillForward.
      */
     /**
      * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
@@ -3187,6 +3241,7 @@
         applePaySettings.paymentRequest = applePaySettings.paymentRequest || {};
         applePaySettings.disableApplePayButton = applePaySettings.disableApplePayButton || function() {};
         applePaySettings.enableApplePayButton = applePaySettings.enableApplePayButton || function() {};
+        applePaySettings.onPaymentAuthorized = applePaySettings.onPaymentAuthorized; // undefined is a valid value, and means "send captured token to BillForward, and dispel Apple Pay dialog when outcome is known"
         // supported for Stripe only
         bfjs.gatewayInstances['stripe'].useApplePay = true;
         bfjs.gatewayInstances['stripe'].applePaySettings = applePaySettings;
