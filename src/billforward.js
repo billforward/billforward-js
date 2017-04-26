@@ -838,10 +838,10 @@
 
         p.ultimateSuccess = function(paymentMethod) {
             //console.log(paymentMethod);
-            this.transaction.callback(paymentMethod, false);
-            if ('undefined' !== typeof this.transaction.afterUltimateSuccess) {
-                this.transaction.afterUltimateSuccess();
+            if ('undefined' !== typeof this.beforeUltimateSuccess) {
+                this.beforeUltimateSuccess();
             }
+            this.transaction.callback(paymentMethod, false);
         };
 
         p.ultimateFailure = function(reason) {
@@ -851,10 +851,10 @@
                 this.undisableForm = null;
                 this.submitDanceBegun = false;
             }*/
-            this.transaction.callback(null, reason);
-            if ('undefined' !== typeof this.transaction.afterUltimateFailure) {
-                this.transaction.afterUltimateFailure();
+            if ('undefined' !== typeof this.beforeUltimateFailure) {
+                this.beforeUltimateFailure();
             }
+            this.transaction.callback(null, reason);
         };
 
         return TheClass;
@@ -1019,28 +1019,34 @@
 
             var self = this;
             if (this.myGateway.useApplePay) {
-                this.transaction.responsibleForDispellingApplePayDialog = true;
+                this.transaction.responsibleForClosingApplePay =
+                'undefined' === typeof self.myGateway.applePaySettings.onPaymentAuthorized;
 
                 function beginApplePay() {
                     // user currently needs to invoke .begin()
                     var session = Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
-                            self.transaction.dispelApplePayDialog = completion;
-                            function sendTokenToBF(result) {
-                                self.gatewayResponseHandler(200, {
-                                    id: result.token.id,
-                                    card: result.token.card
-                                });
+                            var submittingTokenToBF = false;
+                            function submitTokenToBF() {
+                                if (!submittingTokenToBF) {
+                                    submittingTokenToBF = true;
+                                    if (!self.transaction.state.cardDetails) {
+                                        $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                                    }
+                                    self.gatewayResponseHandler(200, result.token);
+                                }
                             }
-                            if ('undefined' === typeof self.myGateway.applePaySettings.onPaymentAuthorized) {
-                                sendTokenToBF(result);
+                            self.transaction.applePayPaymentAuthorized = true;
+                            self.transaction.closeApplePayDialog = completion;
+                            self.transaction.submitTokenToBF = submitTokenToBF;
+                            if (self.transaction.responsibleForClosingApplePay) {
+                                submitTokenToBF();
                             } else {
-                                self.transaction.responsibleForDispellingApplePayDialog = false;
                                 self.myGateway.applePaySettings.onPaymentAuthorized(
                                     result,
                                     completion,
-                                    sendTokenToBF
+                                    submitTokenToBF
                                     );
                             }
                         }, function(error) {
@@ -1054,7 +1060,7 @@
 
                     // monkey-patch session.begin() to also disable the manual card capture form
                     forwardingSession.begin = function() {
-                        if (self.transaction.responsibleForDispellingApplePayDialog) {
+                        if (self.transaction.responsibleForClosingApplePay) {
                             if (!self.transaction.state.cardDetails) {
                                 $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
                             }
@@ -1068,7 +1074,7 @@
                         set: function(value) {
                             var proto = this.prototype;
                             this.prototype.oncancel = function() {
-                                if (self.transaction.responsibleForDispellingApplePayDialog) {
+                                if (self.transaction.responsibleForClosingApplePay) {
                                     if (!self.transaction.state.cardDetails) {
                                         $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
                                     }
@@ -1163,11 +1169,15 @@
                 }
             }
 
-            var self = this;
-
-            Stripe.card.createToken(tokenInfo, function() {
-                self.gatewayResponseHandler.apply(self, arguments);
-            });
+            if ('undefined' === typeof this.transaction.submitTokenToBF) {
+                var self = this;
+                Stripe.card.createToken(tokenInfo, function() {
+                    self.gatewayResponseHandler.apply(self, arguments);
+                });
+            } else {
+                // don't bother creating token; we have token already
+                this.transaction.submitTokenToBF();
+            }
         };
 
         function transformStripeJsErrorToBfjsError(stripeResponse) {
@@ -1267,17 +1277,25 @@
             }
         };
 
-        p.afterUltimateSuccess = function() {
+        p.beforeUltimateSuccess = function() {
             if (this.myGateway.useApplePay
-                && this.transaction.responsibleForDispellingApplePayDialog) {
-                this.transaction.dispelApplePayDialog(ApplePaySession.STATUS_SUCCESS);
+                && this.transaction.responsibleForClosingApplePay) {
+                try {
+                    this.transaction.closeApplePayDialog(ApplePaySession.STATUS_SUCCESS);
+                } catch(err) {
+                    console.log(err);
+                }
             }
         };
 
-        p.afterUltimateFailure = function() {
+        p.beforeUltimateFailure = function() {
             if (this.myGateway.useApplePay
-                && this.transaction.responsibleForDispellingApplePayDialog) {
-                this.transaction.dispelApplePayDialog(ApplePaySession.STATUS_FAILURE);
+                && this.transaction.responsibleForClosingApplePay) {
+                try {
+                    this.transaction.closeApplePayDialog(ApplePaySession.STATUS_FAILURE);
+                } catch(err) {
+                    console.log(err);
+                }
             }
         };
 
@@ -3224,7 +3242,7 @@
      * @typedef {Function} PaymentAuthorized
      * @param {Object} result - Result of card capture. Contains Stripe Token and Card.
      * @param {CompleteApplePaySession} completion - Dispels the Apple Pay dialog. Invoke this when you want to return interaction to the user. Usually you should invoke this when the ultimate outcome of the card capture flow ("did I successfully create a new PaymentMethod in BillForward?") is known. But there are situations where you may need to prematurely tell the user "it succeeded" -- for example if you need them to fill in other parts of the form (e.g. accept terms & conditions) before submitting the Stripe token to BillForward.
-     * @param {SubmitStripeTokenToBillForward} submitToBillForward - Submits the Stripe token to BillForward. Invoke this when all interactions required of the user have completed, and you would like to send the Stripe token to BillForward to create a PaymentMethod.
+     * @param {SubmitStripeTokenToBillForward} submitTokenToBF - Submits the Stripe token to BillForward. Invoke this when all interactions required of the user have completed, and you would like to send the Stripe token to BillForward to create a PaymentMethod.
      */
     /**
      * @typedef {Object} ApplePaySettings
@@ -3233,7 +3251,7 @@
      * @property {Function} onApplePayBegunCheckingAvailability - [Optional] This event is fired to help you show detailed loading progress. It implies that Stripe.js has loaded, that we have successfully grabbed Stripe credentials from BillForward, that we have inited Stripe.js with those credentials, and that we are about to check whether Apple Pay is available.
      * @property {Function} disableApplePayButton - [Optional] This event is fired whenever we recommend that you disable your Apple Pay button (i.e. to prevent a user from retrying card capture whilst a request is in-flight).
      * @property {Function} enableApplePayButton - [Optional] This event is fired whenever we recommend that you enable your Apple Pay button (i.e. to enable a user to retry card capture once there are no requests is in-flight).
-     * @property {PaymentAuthorized} onPaymentAuthorized - [Optional] This event is fired when Stripe.js successfully receives a token from the Apple Pay user (but _before_ sending the Stripe token to BillForward). If you do not override this, we will automatically send the Stripe token to BillForward. Override this if you would like to do anything (such as returning interaction to the user so that they can complete a form) before sending the token to BillForward.
+     * @property {PaymentAuthorized} onPaymentAuthorized - [Optional] This event is fired when Stripe.js successfully receives a token from the Apple Pay user (but _before_ sending the Stripe token to BillForward). If you do not override this, we will automatically send the Stripe token to BillForward. Override this if you would like to do anything (such as returning interaction to the user so that they can complete a form) before sending the token to BillForward. When the user has finished interacting with the form: they can submit their Apple Pay token by using the existing "submit" button in the form (if present), or you can invoke `submitTokenToBF()`. Note also that if the user has captured an Apple Pay token, then that is the token that we will submit when "submit" is clicked (we will ignore any card details input into non-Apple Pay portion of the form, and will not acquire a token for those).
      */
     /**
      * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
