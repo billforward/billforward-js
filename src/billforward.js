@@ -1026,7 +1026,7 @@
                     var session = Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
-                            this.transaction.dispelApplePayDialog = completion;
+                            self.transaction.dispelApplePayDialog = completion;
                             function sendTokenToBF(result) {
                                 self.gatewayResponseHandler(200, {
                                     id: result.token.id,
@@ -1054,8 +1054,10 @@
 
                     // monkey-patch session.begin() to also disable the manual card capture form
                     forwardingSession.begin = function() {
-                        if (!self.transaction.state.cardDetails) {
-                            $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                        if (self.transaction.responsibleForDispellingApplePayDialog) {
+                            if (!self.transaction.state.cardDetails) {
+                                $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
+                            }
                         }
                         self.myGateway.applePaySettings.disableApplePayButton();
                         return this.prototype.begin.apply(this.prototype, arguments);
@@ -1066,8 +1068,10 @@
                         set: function(value) {
                             var proto = this.prototype;
                             this.prototype.oncancel = function() {
-                                if (!self.transaction.state.cardDetails) {
-                                    $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                if (self.transaction.responsibleForDispellingApplePayDialog) {
+                                    if (!self.transaction.state.cardDetails) {
+                                        $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                    }
                                 }
                                 self.myGateway.applePaySettings.enableApplePayButton();
                                 return value.apply(proto, arguments);

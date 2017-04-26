@@ -61,6 +61,31 @@
 				}
 			}
 
+			/**
+			 * You don't _have_ to override onPaymentAuthorized.
+			 * This is just for cases where you want to return interaction to the user
+			 * (i.e. so that they can agree to Terms & Conditions),
+			 * And require them to click a submit button to finish the flow
+			 */
+			function onPaymentAuthorized(result, completion, sendTokenToBF) {
+				log('info', 'Got Stripe token.');
+				console.log(result);
+
+				log('info', 'Dispelling Apple Pay dialog.');
+				try {
+					completion(ApplePaySession.STATUS_SUCCESS);
+				} catch (err) {
+					console.error(err);
+				}
+
+				log('info', 'Will continue flow in 5sec.');
+
+				setTimeout(function() {
+					log('info', 'Continuing flow (sending Stripe token to BillForward).');
+					sendTokenToBF(result);
+				}, 5000);
+			}
+
 			function enableApplePayButton() {
 				$('#apple-pay-button').prop('disabled', false);
 				log('info', 'Enabled Apple Pay button.');
@@ -84,7 +109,8 @@
 				onApplePayAvailability: onApplePayAvailability,
 				paymentRequest: paymentRequest,
 				disableApplePayButton: disableApplePayButton,
-				enableApplePayButton: enableApplePayButton
+				enableApplePayButton: enableApplePayButton,
+				onPaymentAuthorized: onPaymentAuthorized
 			});
 			BillForward.captureCardOnSubmit(formSelector, 'stripe', accountID, callback);
 
