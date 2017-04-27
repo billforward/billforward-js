@@ -1044,9 +1044,9 @@
                                 submitTokenToBF();
                             } else {
                                 self.myGateway.applePaySettings.onPaymentAuthorized(
-                                    result,
                                     completion,
-                                    submitTokenToBF
+                                    submitTokenToBF,
+                                    result
                                     );
                             }
                         }, function(error) {
@@ -3240,9 +3240,9 @@
      */
     /**
      * @typedef {Function} PaymentAuthorized
-     * @param {Object} result - Result of card capture. Contains Stripe Token and Card.
      * @param {CompleteApplePaySession} completion - Dispels the Apple Pay dialog. Invoke this when you want to return interaction to the user. Usually you should invoke this when the ultimate outcome of the card capture flow ("did I successfully create a new PaymentMethod in BillForward?") is known. But there are situations where you may need to prematurely tell the user "it succeeded" -- for example if you need them to fill in other parts of the form (e.g. accept terms & conditions) before submitting the Stripe token to BillForward.
      * @param {SubmitStripeTokenToBillForward} submitTokenToBF - Submits the Stripe token to BillForward. Invoke this when all interactions required of the user have completed, and you would like to send the Stripe token to BillForward to create a PaymentMethod.
+     * @param {Object} result - Result of card capture. Contains Stripe Token and Card.
      */
     /**
      * @typedef {Object} ApplePaySettings

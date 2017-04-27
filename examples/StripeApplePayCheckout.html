@@ -67,7 +67,7 @@
 			 * (i.e. so that they can agree to Terms & Conditions),
 			 * And require them to click a submit button to finish the flow
 			 */
-			function onPaymentAuthorized(result, completion, submitTokenToBF) {
+			function onPaymentAuthorized(completion, submitTokenToBF, result) {
 				log('info', 'Got Stripe token.');
 				console.log(result);
 
