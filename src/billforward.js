@@ -1043,6 +1043,9 @@
                             if (self.transaction.responsibleForClosingApplePay) {
                                 submitTokenToBF();
                             } else {
+                                if (!self.transaction.state.cardDetails) {
+                                    $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', false);
+                                }
                                 self.myGateway.applePaySettings.onPaymentAuthorized(
                                     completion,
                                     submitTokenToBF,
