@@ -3259,6 +3259,9 @@
      * @property {PaymentAuthorized} onPaymentAuthorized - [Optional] This event is fired when Stripe.js successfully receives a token from the Apple Pay user (but _before_ sending the Stripe token to BillForward). If you do not override this, we will automatically send the Stripe token to BillForward. Override this if you would like to do anything (such as returning interaction to the user so that they can complete a form) before sending the token to BillForward. When the user has finished interacting with the form: they can submit their Apple Pay token by using the existing "submit" button in the form (if present), or you can invoke `submitTokenToBF()`. Note also that if the user has captured an Apple Pay token, then that is the token that we will submit when "submit" is clicked (we will ignore any card details input into non-Apple Pay portion of the form, and will not acquire a token for those). When handling this callback: consider hiding any part of the form used for capturing non-Apple Pay cards (since -- as soon as an Apple Pay token is captured -- the Apple Pay token is the only token that we will be submitting to BillForward).
      */
     /**
+     * Currently suported only in concert with `BillForward.captureCardOnSubmit()` invocation.
+     * @name addApplePayButton
+     * @function 
      * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
      */
     bfjs.addApplePayButton = function(applePaySettings) {
