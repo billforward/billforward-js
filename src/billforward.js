@@ -1027,16 +1027,16 @@
                     var session = Stripe.applePay.buildSession(
                         self.myGateway.applePaySettings.paymentRequest,
                         function(result, completion) {
-                            var submittingTokenToBF = false;
                             function submitTokenToBF() {
-                                if (!submittingTokenToBF) {
-                                    submittingTokenToBF = true;
+                                if (!self.transaction.submittingApplePayTokenToBF) {
+                                    self.transaction.submittingApplePayTokenToBF = true;
                                     if (!self.transaction.state.cardDetails) {
                                         $(self.transaction.formElementCandidate).find('button[type=submit]').prop('disabled', true);
                                     }
                                     self.gatewayResponseHandler(200, result.token);
                                 }
                             }
+                            self.transaction.submittingApplePayTokenToBF = false;
                             self.transaction.applePayPaymentAuthorized = true;
                             self.transaction.closeApplePayDialog = completion;
                             self.transaction.submitTokenToBF = submitTokenToBF;
@@ -1280,25 +1280,27 @@
             }
         };
 
-        p.beforeUltimateSuccess = function() {
-            if (this.myGateway.useApplePay
-                && this.transaction.responsibleForClosingApplePay) {
+        p.resetApplePay = function(outcome) {
+            if (this.transaction.responsibleForClosingApplePay) {
                 try {
-                    this.transaction.closeApplePayDialog(ApplePaySession.STATUS_SUCCESS);
+                    this.transaction.closeApplePayDialog(outcome);
                 } catch(err) {
                     console.log(err);
                 }
             }
+            this.transaction.submittingApplePayTokenToBF = false;
+            this.transaction.submitTokenToBF = undefined;
+        };
+
+        p.beforeUltimateSuccess = function() {
+            if (this.myGateway.useApplePay) {
+                this.resetApplePay(ApplePaySession.STATUS_SUCCESS);
+                }
         };
 
         p.beforeUltimateFailure = function() {
-            if (this.myGateway.useApplePay
-                && this.transaction.responsibleForClosingApplePay) {
-                try {
-                    this.transaction.closeApplePayDialog(ApplePaySession.STATUS_FAILURE);
-                } catch(err) {
-                    console.log(err);
-                }
+            if (this.myGateway.useApplePay) {
+                this.resetApplePay(ApplePaySession.STATUS_FAILURE);
             }
         };
 
