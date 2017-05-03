@@ -1281,26 +1281,29 @@
         };
 
         p.resetApplePay = function(outcome) {
-            if (this.transaction.responsibleForClosingApplePay) {
+            if (this.transaction.responsibleForClosingApplePay
+                && this.transaction.closeApplePayDialog) {
                 try {
-                    this.transaction.closeApplePayDialog(outcome);
+                    this.transaction.closeApplePayDialog(ApplePaySession[outcome]);
                 } catch(err) {
                     console.log(err);
                 }
+                this.transaction.closeApplePayDialog = undefined;
             }
+            this.transaction.applePayPaymentAuthorized = false;
             this.transaction.submittingApplePayTokenToBF = false;
             this.transaction.submitTokenToBF = undefined;
         };
 
         p.beforeUltimateSuccess = function() {
             if (this.myGateway.useApplePay) {
-                this.resetApplePay(ApplePaySession.STATUS_SUCCESS);
-                }
+                this.resetApplePay('STATUS_SUCCESS');
+            }
         };
 
         p.beforeUltimateFailure = function() {
             if (this.myGateway.useApplePay) {
-                this.resetApplePay(ApplePaySession.STATUS_FAILURE);
+                this.resetApplePay('STATUS_FAILURE');
             }
         };
 
