@@ -955,7 +955,8 @@
             'name-first': 'firstName',
             'name-last': 'lastName',
             'phone-mobile': 'mobile',
-            'use-as-default-payment-method':'defaultPaymentMethod'
+            'use-as-default-payment-method':'defaultPaymentMethod',
+            'email-tokenization-id': 'emailTokenizationID'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1247,7 +1248,8 @@
                     "gateway": "Stripe",
                     "stripeToken": token,
                     "cardID": card.id,
-                    "accountID": this.transaction.accountID
+                    "accountID": this.transaction.accountID,
+                    'email-tokenization-id': this.transaction.emailTokenizationID
                 };
 
                 // add BF-only attributes here
@@ -1359,6 +1361,7 @@
                     holderName: bfjs.core.getFormValue("holder-name", $form),
                     bankAccountName: bfjs.core.getFormValue("bank-account-name", $form),
                     accountHolderType: bfjs.core.getFormValue("account-holder-type", $form),
+                    emailTokenizationID: bfjs.core.getFormValue("email-tokenization-id", $form),
                     defaultPaymentMethod: isDefaultPayment
                 }
             } else {
@@ -1372,7 +1375,8 @@
                     "holder-name": "holderName",
                     "bank-account-name": "bankAccountName",
                     "account-holder-type": "accountHolderType",
-                    "use-as-default-payment-method": "defaultPaymentMethod"
+                    "use-as-default-payment-method": "defaultPaymentMethod",
+                    'email-tokenization-id': 'emailTokenizationID'
                 };
 
                 payload = {};
