@@ -3098,7 +3098,7 @@
     };
 
     bfjs.core.getFormInput = function(key, $formElement) {
-        return $formElement.find("input[bf-data='"+key+"'], select[bf-data='"+key+"']");
+        return $formElement.find("input[data-bf='"+key+"'], select[data-bf='"+key+"']");
     };
 
     bfjs.core.valueFromFormInput = function($formInput) {
