@@ -553,12 +553,12 @@
             }
 
             $.ajax(ajaxObj)
-            .success(function() {
-                self.preAuthSuccessHandler.apply(self, arguments);
-            })
-            .fail(function() {
-                self.preAuthFailHandler.apply(self, arguments);
-            });
+                .success(function() {
+                    self.preAuthSuccessHandler.apply(self, arguments);
+                })
+                .fail(function() {
+                    self.preAuthFailHandler.apply(self, arguments);
+                });
         };
 
         p.doAuthCapture = function(payload) {
@@ -580,12 +580,12 @@
             }
 
             $.ajax(ajaxObj)
-            .success(function() {
-                self.authCaptureSuccessHandler.apply(self, arguments);
-            })
-            .fail(function() {
-                self.authCaptureFailHandler.apply(self, arguments);
-            });
+                .success(function() {
+                    self.authCaptureSuccessHandler.apply(self, arguments);
+                })
+                .fail(function() {
+                    self.authCaptureFailHandler.apply(self, arguments);
+                });
         };
 
         p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown, phase) {
@@ -774,7 +774,7 @@
                             }
                             break;
                         default:
-                        }
+                    }
                     break;
                 case 401:
                     error.code = 1210;
@@ -908,16 +908,16 @@
             var self = this;
 
             // if (!this.submitDanceBegun) {
-                var deferredTransaction = bfjs.TransactionBase.construct();
-                deferredTransaction['do'] = function() {
-                    /*if (disableForm) {
-                        disableForm();
-                    }
-                    this.undisableForm = undisableForm;*/
-                    self.startAuthCapture(self.preAuthResponsePayload);
-                };
+            var deferredTransaction = bfjs.TransactionBase.construct();
+            deferredTransaction['do'] = function() {
+                /*if (disableForm) {
+                    disableForm();
+                }
+                this.undisableForm = undisableForm;*/
+                self.startAuthCapture(self.preAuthResponsePayload);
+            };
 
-                this.submitDancer.doWhenReady(deferredTransaction);
+            this.submitDancer.doWhenReady(deferredTransaction);
             // }
         };
 
@@ -956,7 +956,8 @@
             'name-last': 'lastName',
             'phone-mobile': 'mobile',
             'use-as-default-payment-method':'defaultPaymentMethod',
-            'email-tokenization-id': 'emailTokenizationID'
+            'email-tokenization-id': 'emailTokenizationID',
+            'requires-setup-intent': 'requiresSetupIntent'
         };
 
         var p = TheClass.prototype = new _parent();
@@ -1016,12 +1017,15 @@
                 });
             }
 
+            this.transaction.bfjs.state.stripe.publishableKey = stripePublishableKey;
+            this.transaction.bfjs.state.stripe.accountId = stripeAccountID;
+
             Stripe.setPublishableKey(stripePublishableKey);
 
             var self = this;
             if (this.myGateway.useApplePay) {
                 this.transaction.responsibleForClosingApplePay =
-                'undefined' === typeof self.myGateway.applePaySettings.onPaymentAuthorized;
+                    'undefined' === typeof self.myGateway.applePaySettings.onPaymentAuthorized;
 
                 function beginApplePay() {
                     // user currently needs to invoke .begin()
@@ -1051,7 +1055,7 @@
                                     completion,
                                     submitTokenToBF,
                                     result
-                                    );
+                                );
                             }
                         }, function(error) {
                             self.gatewayResponseHandler(402, {
@@ -1119,15 +1123,15 @@
                     var mapping = mappings[i];
                     var valueFromForm;
                     valueFromForm = this.transaction.state.cardDetails
-                    ? this.transaction.state.cardDetails[i]
-                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                        ? this.transaction.state.cardDetails[i]
+                        : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
 
                     map[i] = valueFromForm;
                 }
 
                 return map;
             })
-            .call(this, TheClass.mappings);
+                .call(this, TheClass.mappings);
 
             var setKeyToVal = function(key, value) {
                 tokenInfo[TheClass.mappings[key]] = value;
@@ -1160,8 +1164,8 @@
                             if (!resolvedValues['cardholder-name']) {
                                 // we'll have to build it from first and last
                                 var cardHolderName = [
-                                resolvedValues['name-first'],
-                                resolvedValues['name-last']
+                                    resolvedValues['name-first'],
+                                    resolvedValues['name-last']
                                 ].join(" ");
 
                                 setKeyToVal('cardholder-name', cardHolderName);
@@ -1198,35 +1202,35 @@
             var stripeError = stripeResponse.error;
             switch(stripeError.type) {
                 case "card_error":
-                switch (stripeError.code) {
-                    case "invalid_expiry_year":
-                    bfjsError.code = 3311;
-                    // bfjsError.message = "Card's expiry year is invalid.";
-                    bfjsError.message = stripeError.message;
+                    switch (stripeError.code) {
+                        case "invalid_expiry_year":
+                            bfjsError.code = 3311;
+                            // bfjsError.message = "Card's expiry year is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_expiry_month":
+                            bfjsError.code = 3312;
+                            // bfjsError.message = "Card's expiry month is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_cvc":
+                            bfjsError.code = 3320;
+                            // bfjsError.message = "Card's Security code (CVC) is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_request_error":
+                            bfjsError.code = 3400;
+                            bfjsError.message = stripeError.message;
+                            break;
+                        default:
+                            bfjsError.code = 3300;
+                            bfjsError.message = stripeError.message;
+                    }
                     break;
-                    case "invalid_expiry_month":
-                    bfjsError.code = 3312;
-                    // bfjsError.message = "Card's expiry month is invalid.";
-                    bfjsError.message = stripeError.message;
-                    break;
-                    case "invalid_cvc":
-                    bfjsError.code = 3320;
-                    // bfjsError.message = "Card's Security code (CVC) is invalid.";
-                    bfjsError.message = stripeError.message;
-                    break;
-                    case "invalid_request_error":
-                    bfjsError.code = 3400;
-                    bfjsError.message = stripeError.message;
-                    break;
-                    default:
-                    bfjsError.code = 3300;
-                    bfjsError.message = stripeError.message;
-                }
-                break;
                 default:
-                // we've no knowledge of any other type of error than card_error
-                // however, their message will likely still be better than our generic apology.
-                bfjsError.message = stripeError.message;
+                    // we've no knowledge of any other type of error than card_error
+                    // however, their message will likely still be better than our generic apology.
+                    bfjsError.message = stripeError.message;
             }
 
             return bfjsError;
@@ -1263,10 +1267,15 @@
                     } else {
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                     }
+
                     switch(i) {
-                            case 'use-as-default-payment-method':
+                        case 'use-as-default-payment-method':
                             // if it's filled in, evaluate as true. Unless it's filled in as string "false".
-                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            valueFromForm = valueFromForm && valueFromForm !== "false";
+                            break;
+
+                        case 'requires-setup-intent':
+                            valueFromForm = valueFromForm && valueFromForm !== "false";
                             break;
                     }
 
@@ -1615,17 +1624,21 @@
                 failed = true;
             }
 
+            this.transaction.bfjs.state.clientToken = clientToken;
+            this.transaction.bfjs.state.merchantId = merchantId;
+            this.transaction.bfjs.state.environment = environment;
+
             this.clientToken = clientToken;
             this.merchantId = merchantId;
             this.environment = environment;
             var resolvedEnvironment;
             switch(environment) {
-                    case 'Production':
-                        resolvedEnvironment = BraintreeData.environments.production;
-                        break;
-                    case 'Sandbox':
-                    default:
-                        resolvedEnvironment = BraintreeData.environments.sandbox;
+                case 'Production':
+                    resolvedEnvironment = BraintreeData.environments.production;
+                    break;
+                case 'Sandbox':
+                default:
+                    resolvedEnvironment = BraintreeData.environments.sandbox;
             }
             this.resolvedEnvironment = resolvedEnvironment;
 
@@ -1691,11 +1704,11 @@
                         $imgSelector.off('ready', handlePayPalReady);
                         self.myGateway.handlePayPalReady();
                         $imgSelector.one('load', handlePayPalLoaded)
-                        .each(function() {
-                          if(this.complete) {
-                            $(this).load();
-                            }
-                        });
+                            .each(function() {
+                                if(this.complete) {
+                                    $(this).load();
+                                }
+                            });
                         e.stopPropagation();
                     }
 
@@ -1853,7 +1866,7 @@
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                     }
                     switch(i) {
-                            case 'use-as-default-payment-method':
+                        case 'use-as-default-payment-method':
                             // if it's filled in, evaluate as true. Unless it's filled in as string "false".
                             valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                             break;
@@ -2020,15 +2033,15 @@
                     var mapping = mappings[i];
                     var valueFromForm;
                     valueFromForm = this.transaction.state.cardDetails
-                    ? this.transaction.state.cardDetails[i]
-                    : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                        ? this.transaction.state.cardDetails[i]
+                        : this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
 
                     map[i] = valueFromForm;
                 }
 
                 return map;
             })
-            .call(this, TheClass.mappings);
+                .call(this, TheClass.mappings);
 
             var setKeyToVal = function(key, value) {
                 tokenInfo[TheClass.mappings[key]] = value;
@@ -2093,26 +2106,26 @@
 
             var url = "https://core.spreedly.com/v1/payment_methods.js?"+ paramStr;
             var ajaxObj = {
-              type: "GET",
-              url: url,
-              dataType: "jsonp",
-              async: true
+                type: "GET",
+                url: url,
+                dataType: "jsonp",
+                async: true
             };
 
             $.ajax(ajaxObj)
-            .done(function() {
-                self.gatewayResponseHandler.apply(self, arguments);
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                var bfjsError = {
-                    detailObj: jqXHR,
-                    message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
-                    code: 3100
-                };
+                .done(function() {
+                    self.gatewayResponseHandler.apply(self, arguments);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    var bfjsError = {
+                        detailObj: jqXHR,
+                        message: "Card capture with Spreedly failed; failed to connect to Spreedly.",
+                        code: 3100
+                    };
 
-                // maybe should only go to ultimate failure if ALL gateways fail to tokenize
-                self.ultimateFailure(bfjsError);
-            });
+                    // maybe should only go to ultimate failure if ALL gateways fail to tokenize
+                    self.ultimateFailure(bfjsError);
+                });
         };
 
         p.gatewayResponseHandler = function(data) {
@@ -2152,7 +2165,7 @@
                         valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
                     }
                     switch(i) {
-                            case 'use-as-default-payment-method':
+                        case 'use-as-default-payment-method':
                             // if it's filled in, evaluate as true. Unless it's filled in as string "false".
                             valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
                             break;
@@ -2256,7 +2269,7 @@
 
                 if (!payload.VPSProtocol
                     || !payload.nextURL
-                    ) {
+                ) {
                     failed = true;
                 }
             } catch (e){
@@ -2328,7 +2341,7 @@
                     $registrationRequester.remove();
                     self.gatewayResponseHandler.call(self, originalEvent.data);
                 }
-              };
+            };
             $(window).off('message', handleIFrameResponse);
             $(window).one('message', handleIFrameResponse);
 
@@ -2428,9 +2441,9 @@
                     valueFromForm = extendedDetails[i];
                     switch(i) {
                         case 'use-as-default-payment-method':
-                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
-                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
-                        break;
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
                     }
 
                     if (valueFromForm) {
@@ -2555,7 +2568,7 @@
                     || !payload.redirectEndpoint
                     || !payload.oppwaDomain
                     || !payload.oppwaPaymentWidgetsVersion
-                    ) {
+                ) {
                     failed = true;
                 }
             } catch (e){
@@ -2625,7 +2638,7 @@
                     $payvisionIframe.remove();
                     self.gatewayResponseHandler.call(self, originalEvent.data);
                 }
-              };
+            };
             $(window).off('message', handleIFrameResponse);
             $(window).on('message', handleIFrameResponse);
 
@@ -2710,12 +2723,12 @@
             //https://acapture.docs.oppwa.com/reference/parameters#testing
 
             formContainer = $('<div>')
-                    .css('display', "inline-block")
-                    .attr('id', payvisionFormParentID)
-                    // .appendTo($('<div>')
-                    //     .css('display', "inline-block")
-                    //     .attr('id', payvisionFormGrandparentID)
-                        .appendTo(this.myGateway.payvisionFormContainerSelector);
+                .css('display', "inline-block")
+                .attr('id', payvisionFormParentID)
+                // .appendTo($('<div>')
+                //     .css('display', "inline-block")
+                //     .attr('id', payvisionFormGrandparentID)
+                .appendTo(this.myGateway.payvisionFormContainerSelector);
 
             // $('<script>')
             //     .attr('type', 'text/javascript')
@@ -2745,9 +2758,9 @@
                 .attr('target', payvisionIframeID)
                 .appendTo(
                     formContainer
-                    )
-                    .text(cardBrands)
-                    .css('display', "none");
+                )
+                .text(cardBrands)
+                .css('display', "none");
 
             // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
             // var $payvisionForm = $("#"+payvisionFormID);
@@ -2885,9 +2898,9 @@
                     valueFromForm = extendedDetails[i];
                     switch(i) {
                         case 'use-as-default-payment-method':
-                        // if it's filled in, evaluate as true. Unless it's filled in as string "false".
-                        valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
-                        break;
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
                     }
 
                     if (valueFromForm) {
@@ -2973,7 +2986,9 @@
             url: null,
             token: null,
             organizationID: null
-        }
+        },
+        stripe: { }, // publishableKey, accountId
+        braintree: { } // clientToken, merchantId, environment
     };
 
     bfjs.grabScripts = function() {
@@ -3027,10 +3042,10 @@
 
             switch (actor.depName) {
                 // case 'Stripe':
-                    // stripeActor = bfjs.lateActors[i];
-                    // if (attemptLoadUsingRequire(stripeActor)) {
-                    //     continue;
-                    // }
+                // stripeActor = bfjs.lateActors[i];
+                // if (attemptLoadUsingRequire(stripeActor)) {
+                //     continue;
+                // }
                 case 'braintree':
                     braintreeActor = bfjs.lateActors[i];
                     if(typeof window.BraintreeData === 'undefined') {
@@ -3082,7 +3097,7 @@
         if (script.readyState){  //IE
             script.onreadystatechange = function(){
                 if (script.readyState == "loaded" ||
-                        script.readyState == "complete"){
+                    script.readyState == "complete"){
                     script.onreadystatechange = null;
                     doCallback();
                 }
@@ -3150,8 +3165,8 @@
             throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
         }
         var newTransaction = cardDetails
-        ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails)
-        : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
+            ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails)
+            : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
 
         bfjs.core.doWhenReady(newTransaction);
     };
@@ -3268,7 +3283,7 @@
     /**
      * Currently suported only in concert with `BillForward.captureCardOnSubmit()` invocation.
      * @name addApplePayButton
-     * @function 
+     * @function
      * @param {ApplePaySettings} applePaySettings - Object containing Apple Pay settings.
      */
     bfjs.addApplePayButton = function(applePaySettings) {
@@ -3351,8 +3366,8 @@
         })();
 
         return 'undefined' === typeof IE
-        ? false
-        : +IE<=9;
+            ? false
+            : +IE<=9;
     };
 
     bfjs.isProtocolSupported = function(BFURL) {
@@ -3390,7 +3405,7 @@
     };
 
     bfjs.loadGateways = function(gateways, cardDetails) {
-       for (i = 0; i < gateways.length; i++) {
+        for (i = 0; i < gateways.length; i++) {
             var gateway = gateways[i];
             var resolvedName = bfjs.resolveGatewayName(gateway, cardDetails);
             switch(gateway.toLowerCase()) {
