@@ -341,6 +341,37 @@
         return TheClass;
     })();
 
+    bfjs.ShuttleGateway = (function () {
+        var C = function () {
+            this.key = "shuttle";
+            this.wpwlOptions = {};
+            this.supportedCardBrands = [];
+            this.getDeferredCardDetails = function() { return {} };
+            this.handleFormFetchBegin = function() { return {} };
+            this.handleFormReady = function() { return {} };
+            this.handleFormUsable = function() { return {} };
+            this.handleAfterSubmit = function() { return {} };
+            this.handleCheckoutWidgetFetchBegin = function() { return {} };
+            this.handleCheckoutWidgetFetchFinish = function() { return {} };
+        };
+
+        var p = C.prototype = new bfjs.GatewayActor();
+        p.constructor = C;
+
+        C.construct = (function () {
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return C;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -368,13 +399,14 @@
     bfjs.Transaction = (function() {
         var _parent = bfjs.TransactionBase;
 
-        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback, cardDetails) {
+        var TheClass = function(bfjs, targetGateway, formElementCandidate, accountID, callback, cardDetails, options) {
             _parent.apply(this, arguments);
             this.formElementCandidate = formElementCandidate;
             this.callback = callback;
             this.accountID = accountID;
             this.targetGateway = targetGateway;
             this.bfjs = bfjs;
+            this.options = options;
             this.state = {
                 formElement:  null,
                 $formElement: null,
@@ -919,6 +951,241 @@
 
                 this.submitDancer.doWhenReady(deferredTransaction);
             // }
+        };
+
+        return TheClass;
+    })();
+
+    bfjs.ShuttleTransaction = (function() {
+        var _parent = bfjs.GatewayTransaction;
+
+        var TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        TheClass.mappings = {
+            'cardholder-name': 'name',
+            'cvc': 'cvc',
+            'number': 'number',
+            'exp-month': 'exp_month',
+            'exp-year': 'exp_year',
+            'exp-date': 'exp_date',
+            'address-line1': 'address_line1',
+            'address-line2': 'address_line2',
+            'address-city': 'address_city',
+            'address-province': 'address_state',
+            'address-zip': 'address_zip',
+            'address-country': 'address_country',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+        };
+
+        // these, if present, will be thrown straight into BF authCapture request.
+        TheClass.bfBypass = {
+            'email': 'email',
+            'company-name': 'companyName',
+            'name-first': 'firstName',
+            'name-last': 'lastName',
+            'phone-mobile': 'mobile',
+            'use-as-default-payment-method':'defaultPaymentMethod',
+            'email-tokenization-id': 'emailTokenizationID'
+        };
+
+        var p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p.doPageLoadDanceWhenReady = function () {
+            this.submitDancer.loadedCallback();
+        };
+
+        p.oncePreAuthed = function() { };
+
+        p.startAuthCapture = function(data) {
+            var tokenInfo = {};
+            var signatureBody = Object.assign({}, this.transaction.options);
+            delete signatureBody["host"];
+            delete signatureBody["nonce"];
+
+            var payload = {
+                "@type": "ShuttlePreAuthRequest",
+                "gateway": "Shuttle",
+                "signatureBody": JSON.stringify(signatureBody)
+            }
+            if(this.transaction.bfjs.state.api.organizationID != null) {
+                payload.organizationID = this.transaction.bfjs.state.api.organizationID;
+            }
+
+            var ajaxObj = this.buildBFAjax(payload, "pre-auth");
+
+            if (!bfjs.isProtocolSupported(ajaxObj.url)) {
+                this.ultimateFailure({
+                    code: 1101,
+                    message: "Failed to connect to BillForward; protocol not supported by browser",
+                    detailObj: {
+                        'explanation': "We cannot do cross-protocol (e.g. HTTP to HTTPS) cross-domain requests in Internet Explorer 8 & 9. Please ensure that your page is available via the same protocol with which you connect to BillForward (i.e. HTTPS), or ensure that the user uses a newer browser (i.e. IE10 or better)"
+                    }
+                });
+                return;
+            }
+
+            $.ajax(ajaxObj)
+              .success(function(data) {
+                  var signature = data.signature;
+
+                  Shuttle.selectToken(this.transaction.options, signature);
+              })
+              .fail(function() {
+                  self.preAuthFailHandler.apply(self, arguments);
+              });
+
+            if ('undefined' === typeof this.transaction.submitTokenToBF) {
+                var self = this;
+                Stripe.card.createToken(tokenInfo, function() {
+                    self.gatewayResponseHandler.apply(self, arguments);
+                });
+            } else {
+                // don't bother creating token; we have token already
+                this.transaction.submitTokenToBF();
+            }
+        };
+
+        function transformStripeJsErrorToBfjsError(stripeResponse) {
+            var bfjsError = {
+                code: 3000,
+                message: "Card capture failed.",
+                detailObj: stripeResponse
+            };
+
+            // Stripe's error messages are actually very nice
+            // so let's use those
+            // also note that multiple Stripe errors (with differing messages) can share the same code
+            // so again: Stripe's message text is required for the full story.
+            var stripeError = stripeResponse.error;
+            switch(stripeError.type) {
+                case "card_error":
+                    switch (stripeError.code) {
+                        case "invalid_expiry_year":
+                            bfjsError.code = 3311;
+                            // bfjsError.message = "Card's expiry year is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_expiry_month":
+                            bfjsError.code = 3312;
+                            // bfjsError.message = "Card's expiry month is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_cvc":
+                            bfjsError.code = 3320;
+                            // bfjsError.message = "Card's Security code (CVC) is invalid.";
+                            bfjsError.message = stripeError.message;
+                            break;
+                        case "invalid_request_error":
+                            bfjsError.code = 3400;
+                            bfjsError.message = stripeError.message;
+                            break;
+                        default:
+                            bfjsError.code = 3300;
+                            bfjsError.message = stripeError.message;
+                    }
+                    break;
+                default:
+                    // we've no knowledge of any other type of error than card_error
+                    // however, their message will likely still be better than our generic apology.
+                    bfjsError.message = stripeError.message;
+            }
+
+            return bfjsError;
+        }
+
+        p.gatewayResponseHandler = function(status, response) {
+            if (response.error) {
+                var bfjsError = transformStripeJsErrorToBfjsError(response)
+
+                // Show the errors on the form
+                this.ultimateFailure(bfjsError);
+            } else {
+                // token contains id, last4, and card type
+                var token = response.id;
+                var card = response.card;
+
+                var payload = {
+                    "@type": 'StripeAuthCaptureRequest',
+                    "gateway": "Stripe",
+                    "stripeToken": token,
+                    "cardID": card.id,
+                    "accountID": this.transaction.accountID,
+                    'email-tokenization-id': this.transaction.emailTokenizationID
+                };
+
+                // add BF-only attributes here
+                var additional = {};
+
+                for (var i in TheClass.bfBypass) {
+                    var mapping = TheClass.bfBypass[i];
+                    var valueFromForm;
+                    if (this.transaction.state.cardDetails) {
+                        valueFromForm = this.transaction.state.cardDetails[i];
+                    } else {
+                        valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
+                    }
+                    switch(i) {
+                        case 'use-as-default-payment-method':
+                            // if it's filled in, evaluate as true. Unless it's filled in as string "false".
+                            valueFromForm = valueFromForm && valueFromForm !== "false" ? true : false;
+                            break;
+                    }
+
+                    if (valueFromForm) {
+                        additional[TheClass.bfBypass[i]] = valueFromForm;
+                    }
+                }
+
+                $.extend(payload, additional);
+
+                // and re-submit
+                this.doAuthCapture(payload);
+            }
+        };
+
+        p.resetApplePay = function(outcome) {
+            if (this.transaction.responsibleForClosingApplePay
+              && this.transaction.closeApplePayDialog) {
+                try {
+                    this.transaction.closeApplePayDialog(ApplePaySession[outcome]);
+                } catch(err) {
+                    console.log(err);
+                }
+                this.transaction.closeApplePayDialog = undefined;
+            }
+            this.transaction.applePayPaymentAuthorized = false;
+            this.transaction.submittingApplePayTokenToBF = false;
+            this.transaction.submitTokenToBF = undefined;
+        };
+
+        p.beforeUltimateSuccess = function() {
+            if (this.myGateway.useApplePay) {
+                this.resetApplePay('STATUS_SUCCESS');
+            }
+        };
+
+        p.beforeUltimateFailure = function() {
+            if (this.myGateway.useApplePay) {
+                this.resetApplePay('STATUS_FAILURE');
+            }
         };
 
         return TheClass;
@@ -3136,7 +3403,7 @@
         };
     };
 
-    var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback) {
+    var invoke = function(formElementSelector, cardDetails, targetGateway, accountID, callback, options) {
         var resolvedGateway = bfjs.resolveGatewayName(targetGateway, cardDetails);
 
         if (!bfjs.core.hasBfCredentials) {
@@ -3150,14 +3417,14 @@
             throw new Error("You need to first call BillForward.loadGateways() with a list of gateways you are likely to use (ie ['stripe', 'braintree', 'generic'])");
         }
         var newTransaction = cardDetails
-        ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails)
-        : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null);
+        ? bfjs.Transaction.construct(bfjs, resolvedGateway, null, accountID, callback, cardDetails, options)
+        : bfjs.Transaction.construct(bfjs, resolvedGateway, formElementSelector, accountID, callback, null, options);
 
         bfjs.core.doWhenReady(newTransaction);
     };
 
-    bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
-        return invoke(formElementSelector, null, targetGateway, accountID, callback);
+    bfjs.captureCardOnSubmit = function(formElementSelector, targetGateway, accountID, callback, options) {
+        return invoke(formElementSelector, null, targetGateway, accountID, callback, options);
     };
 
     bfjs.captureBankAccountOnSubmit = function(formElementSelector, targetGateway, accountID, callback) {
