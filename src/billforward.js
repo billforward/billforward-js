@@ -837,7 +837,6 @@
         };
 
         p.ultimateSuccess = function(paymentMethod) {
-            //console.log(paymentMethod);
             if ('undefined' !== typeof this.beforeUltimateSuccess) {
                 this.beforeUltimateSuccess();
             }
@@ -845,7 +844,6 @@
         };
 
         p.ultimateFailure = function(reason) {
-            //console.error(reason);
             /*if ('undefined' !== typeof this.undisableForm) {
                 this.undisableForm();
                 this.undisableForm = null;
@@ -3041,11 +3039,6 @@
             var loadedCallback = actor.loadedCallback;
 
             switch (actor.depName) {
-                // case 'Stripe':
-                // stripeActor = bfjs.lateActors[i];
-                // if (attemptLoadUsingRequire(stripeActor)) {
-                //     continue;
-                // }
                 case 'braintree':
                     braintreeActor = bfjs.lateActors[i];
                     if(typeof window.BraintreeData === 'undefined') {
@@ -3065,6 +3058,16 @@
                         if (attemptLoadUsingRequire(braintreeActor)) {
                             continue;
                         }
+                    }
+                case 'Stripe':
+                    if (window[actor.depName] !== undefined && window.Stripe.setPublishableKey !== undefined) {
+                        loadedCallback.call(actor);
+                    } else {
+                        queue.push({
+                            actor: actor,
+                            src: actor.depUrl,
+                            callback: loadedCallback
+                        });
                     }
                 default:
                     if (!actor.depName || typeof window[actor.depName] !== 'undefined') {
@@ -3199,6 +3202,50 @@
 
     bfjs.captureCard = function(cardDetails, targetGateway, accountID, callback) {
         return invoke(null, cardDetails, targetGateway, accountID, callback);
+    };
+
+    bfjs.stripeVerifySetupIntent = function (paymentMethodId, callback) {
+        console.log(bfjs.state.stripe);
+
+        var payload = {};
+
+        var fullURL = bfjs.state.api.url + "payment-methods/" + paymentMethodId + "/verify/stripe-setup-intent";
+        var auth = bfjs.state.api.token;
+
+        if(bfjs.state.api.organizationID != null) {
+            payload.organizationID = bfjs.state.api.organizationID;
+        }
+
+        var uriParams = auth === undefined ? "" : "?" + $.param({ access_token: auth });
+
+        var ajaxConfig = {
+            type: "POST",
+            url: fullURL + uriParams,
+            data: JSON.stringify(payload),
+            contentType: 'application/json',
+            crossDomain: true,
+            async: true
+        };
+
+        if (auth === undefined) { // assume session is used
+            ajaxConfig["xhrFields"] = { withCredentials: true };
+        }
+
+        $.ajax(ajaxConfig)
+          .done(function (resp, msg, err) {
+              callback(
+                resp.results[0],
+                null
+              );
+          })
+          .fail(function (resp, msg, err) {
+              var baseTrx = bfjs.TransactionBase.construct();
+
+              callback(
+                resp.responseJSON,
+                baseTrx.jqXHRErrorToBFJSError(resp, msg, err, "other")
+              );
+          });
     };
 
     bfjs.captureBankAccount = function(bankAccountDetails, targetGateway, accountID, callback) {
