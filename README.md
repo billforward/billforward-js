@@ -897,6 +897,179 @@ BillForward.verifyBankAccount(bankDetails, 'stripe', accountID, callback);
 
 ```
 
+### SCA with Stripe
+
+Integrating Stripe's 3-DS goes a little bit further than just using billforward-js for capturing cards.
+
+Refer to Stripe's documentation about [Setup Intents](https://stripe.com/docs/api/setup_intents) or their API docs 
+  for the [SetupIntent object](https://stripe.com/docs/api/setup_intents/object) for more insight on how this works 
+  on the Stripe's end.
+
+
+### How to implement it if I'm currently using BillForward-js?
+
+-   Upgrade to the latest version (TODO release the version in NPM and mention which version is it)
+-   Add Stripe.js V3 to your page e.g. `<script src="https://js.stripe.com/v3/"></script>`
+-   If you're using `BillForward.captureCard()` method then add `"requires-setup-intent": true` to the object that you're passing to that method, e.g.: `BillForward.captureCard({..., "requires-setup-intent": true})`
+-   If you're using `BillForward.captureCardOnSubmit()` then you need to add a hidden input tag: `<input type="hidden" bf-data="requires-setup-intent" value="true" />`
+-   Add a callback (4th parameter for both of those methods mentioned above) that will be called once the initial card setup is done, we will need to do the 3-DS confirmation after that.
+-   In your callback you'll get the resulting data that contains the captured card, as the first parameter (let's call it `data`). You should be able to access a string value at `data.additionalData.setupIntentStatus` which will be either `requires_confirmation`, `requires_action`, or `succeeded` . We're only interested in the first two - if we get any of those this means that we need to invoke the confirmation procedure.
+-   Next we can confirm the SetupIntent by calling Stripe's `handleCardSetup(data.additionalData.setupIntentClientSecret)` method. Doing this will open a new popover (modal) window inside your page where the customer will be able to go through their bank's 3-DS flow.
+-   Once the SetupIntent is confirmed the only thing left is to let BillForward know that the card in question has its setup intent confirmed, which can be done by calling `BillForward.stripeVerifySetupIntent(data.id, [(data, error) => console.log(data, error)])`
+
+Here's a code sample for the above steps:
+
+```
+var bfAPIKey = '***'
+var bfAPIURL = 'https://app-sandbox.billforward.net/v1/'
+
+$(function () {
+    BillForward.useAPI(bfAPIURL, bfAPIKey)
+
+    $('#btn-sbmt').on('click', function () {
+
+        BillForward.captureCard({
+            'cardholder-name': $('#cc-cardholder').val(),
+            'cvc': $('#cc-cvc').val(),
+            'number': $('#cc-number').val(),
+            'exp-month': $('#cc-month').val(),
+            'exp-year': $('#cc-year').val(),
+
+            'requires-setup-intent': true // This is the new option
+
+        }, 'stripe', null /* account ID set to null to create a new account */,
+            function (data) {
+
+                // data.additionalData will contain Stripe's SetupIntent secret that we will use
+                // to confirm the intent (which is Stripe's way of saying 'go through 3-DS challenge')
+                console.log(data)
+
+                if (data.additionalData
+                    && ['requires_confirmation', 'requires_action'].indexOf(data.additionalData.setupIntentStatus) !== -1) {
+
+                    // billforward.js will expose Stripe's public key in its global state
+                    var stripe3 = Stripe(BillForward.state.stripe.publishableKey)
+
+                    // this will trigger a modal window to open on your page with 3-DS challenge
+                    // please refer to https://stripe.com/docs/js/setup_intents/confirm_card_setup for more
+
+                    stripe3.handleCardSetup(data.additionalData.setupIntentClientSecret)
+                        .then(function (setupIntent) {
+
+                            if (setupIntent.error) {
+                                console.error('Caught: ', setupIntent)
+                            } else {
+                                console.log('Attempting to verify setup intent')
+
+                                BillForward.stripeVerifySetupIntent(data.id, function (data, error) {
+                                    console.log(data)
+                                    console.log(error)
+                                })
+                            }
+                        })
+                }
+
+            })
+
+    })
+})
+
+```
+
+### How to implement this if I'm not using BillForward-js?
+
+-   Make sure that you're using Stripe.js V3 (`<script src="https://js.stripe.com/v3/"></script>`)
+-   When you make the `/v1/tokenization/auth-capture` API call to BillForward to save the card, add `requiresSetupIntent: true` to the request.
+-   In the response you'll get SetupIntent's client secret which you'll need to use in order to confirm the SetupIntent: `var intentSecret = captureResult.results[0].additionalData.setupIntentClientSecret;`
+-   You only have to confirm the SetupIntent if its status is `requirest_confirmation` or `requires_action` :
+
+
+    if (captureResult.results[0].additionalData.setupIntentStatus === "requires_action" ||
+        captureResult.results[0].additionalData.setupIntentStatus === "requires_confirmation") { ... }
+
+-   Call Stripe's `confirmCardSetup(intentSecret)`
+-   And let BillForward know once the SetupIntent is confirmed:
+
+
+    var paymentMethodId = captureResult.results[0].id;
+    confirmCardSetup(...).then(intentResult => {
+        $.ajax({
+            type: "POST",
+            url: "https://app-sandbox.billforward.net/v1/payment-methods/"
+                + paymentMethodId + "/verify/stripe-setup-intent" + "?"
+                + $.param({ access_token: bfAPIKey }),
+            data: JSON.stringify({}),
+            contentType: 'application/json',
+            crossDomain: true,
+            async: true
+        })
+    });
+
+Below is a code sample for this approach:
+
+    var bfAPIKey = '***'
+    var bfAPIURL = 'https://app-sandbox.billforward.net/v1/'
+    var s3 = Stripe('***')
+
+    var s3e = s3.elements()
+    var cardE = s3e.create('card')
+    cardE.mount('#stripe-element')
+
+    $('#element-submit').on('click', function () {
+
+        s3.createToken(cardE).then(function (data) {
+            console.log(data)
+
+            $.ajax({
+                type: 'POST',
+                url: bfAPIURL + 'tokenization/auth-capture?access_token=' + bfAPIKey,
+                data: JSON.stringify({
+                    '@type': 'StripeAuthCaptureRequest',
+                    'gateway': 'Stripe',
+                    'stripeToken': data.token.id,
+                    'cardID': data.token.card.id,
+                    'requiresSetupIntent': true
+                }),
+                contentType: 'application/json',
+                crossDomain: true,
+                async: true
+            }).then(function (captureResult) {
+                console.log(captureResult)
+
+                var paymentMethodId = captureResult.results[0].id
+                var intentSecret = captureResult.results[0].additionalData.setupIntentClientSecret
+                var bfStripeCardId = captureResult.results[0].crmID
+
+                if (captureResult.results[0].additionalData.setupIntentStatus === 'requires_action' ||
+                    captureResult.results[0].additionalData.setupIntentStatus === 'requires_confirmation') {
+
+                    s3.confirmCardSetup(intentSecret).then(function (intentResult) {
+
+                        console.log(intentResult)
+
+                        var fullURL = bfAPIURL + 'payment-methods/' + paymentMethodId + '/verify/stripe-setup-intent'
+
+                        var ajaxConfig = {
+                            type: 'POST',
+                            url: fullURL + '?' + $.param({access_token: bfAPIKey}),
+                            data: JSON.stringify({}),
+                            contentType: 'application/json',
+                            crossDomain: true,
+                            async: true
+                        }
+
+                        $.ajax(ajaxConfig)
+                            .done(function (resp, msg, err) {
+                                console.log(resp)
+                            })
+
+                    })
+                }
+            })
+        })
+    });
+
+
 ### Example checkout
 
 See the 'examples' folder for examples of full worked checkouts.
