@@ -908,7 +908,7 @@ Refer to Stripe's documentation about [Setup Intents](https://stripe.com/docs/ap
 
 ### How to implement it if I'm currently using BillForward-js?
 
--   Upgrade to the latest version (TODO release the version in NPM and mention which version is it)
+-   Upgrade to the latest version (7.0.0)
 -   Add Stripe.js V3 to your page e.g. `<script src="https://js.stripe.com/v3/"></script>`
 -   If you're using `BillForward.captureCard()` method then add `"requires-setup-intent": true` to the object that you're passing to that method, e.g.: `BillForward.captureCard({..., "requires-setup-intent": true})`
 -   If you're using `BillForward.captureCardOnSubmit()` then you need to add a hidden input tag: `<input type="hidden" bf-data="requires-setup-intent" value="true" />`
