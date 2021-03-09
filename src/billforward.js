@@ -341,6 +341,31 @@
         return TheClass;
     })();
 
+    bfjs.GoCardlessGateway = (function() {
+        const TheClass = function () {
+            // todo what goes here?
+        };
+
+        const p = TheClass.prototype = new bfjs.GatewayActor();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        return TheClass;
+    })();
+
     bfjs.TransactionBase = (function() {
         var TheClass = function() {
         };
@@ -2947,6 +2972,90 @@
         return TheClass;
     })();
 
+    bfjs.GoCardlessTransaction = (function() {
+        const _parent = bfjs.GatewayTransaction;
+
+        const TheClass = function() {
+            _parent.apply(this, arguments);
+        };
+
+        const p = TheClass.prototype = new _parent();
+        p.constructor = TheClass;
+
+        TheClass.construct = (function() {
+            // factory pattern for invoking own constructor with arguments
+            // basically: return new this(arguments)
+
+            function lambda(args) {
+                return TheClass.apply(this, args);
+            }
+            lambda.prototype = TheClass.prototype;
+
+            return function() {
+                return new lambda(arguments);
+            }
+        })();
+
+        p['do'] = function() {
+            // do nothing
+        };
+
+        p.doSubmitDanceWhenReady = function () {
+            const self = this;
+            const details = $.extend({}, self.transaction.state.cardDetails);
+
+            let payload = {};
+
+            if (self.transaction.formElementCandidate) {
+                const $form = $(self.transaction.formElementCandidate);
+                const isDefaultFormValue = bfjs.core.getFormValue("use-as-default-payment-method", $form);
+                const isDefaultPayment = typeof isDefaultFormValue === "string" ? isDefaultFormValue !== "false" : !!isDefaultFormValue;
+
+                payload = {
+                    accountID: bfjs.core.getFormValue("account-id", $form),
+                    holderName: bfjs.core.getFormValue("holder-name", $form),
+                    accountNumber: bfjs.core.getFormValue("account-number", $form),
+                    sortCode: bfjs.core.getFormValue("sort-code", $form),
+                    defaultPaymentMethod: isDefaultPayment
+                }
+            } else {
+                // map keys in cardDetails object to keys in Billforward API payload
+                const mapping = {
+                    'email-tokenization-id': 'emailTokenizationID',
+                    'account-id': 'accountID',
+                    'holder-name': 'accountHolderName',
+                    'account-number': 'accountNumber',
+                    'sort-code': 'sortCode',
+                    'use-as-default-payment-method': 'defaultPaymentMethod'
+                }
+
+                // build payload
+                for (const key in details) {
+                    if (details.hasOwnProperty(key)) {
+                        const translatedKey = mapping[key] ? mapping[key] : key;
+                        payload[translatedKey] = details[key];
+                    }
+                }
+            }
+
+            $.ajax(self.buildBFAjax(payload, 'direct-debit'))
+                .done(function(resp, msg, err) {
+                    self.transaction.callback(
+                        resp.results[0],
+                        null
+                    );
+                })
+                .fail(function(resp, msg, err) {
+                    self.transaction.callback(null, self.jqXHRErrorToBFJSError(resp, msg, err, "other"))
+                })
+                .always(function(resp, msg, err) {
+                    self.transaction.callback(resp.responseJSON, self.jqXHRErrorToBFJSError(resp, msg, err, "other"))
+                });
+        };
+
+        return TheClass;
+    })();
+
     // core is mainly to check if jquery is loaded
     bfjs.core = bfjs.CoreActor.construct();
 
@@ -2957,7 +3066,8 @@
         'braintree': bfjs.BraintreeGateway.construct(),
         'generic': bfjs.SpreedlyGateway.construct(),
         'sagepay': bfjs.SagePayGateway.construct(),
-        'payvision': bfjs.PayVisionGateway.construct()
+        'payvision': bfjs.PayVisionGateway.construct(),
+        'gocardless': bfjs.GoCardlessGateway.construct()
     };
 
     bfjs.gatewayTransactionClasses = {
@@ -2967,7 +3077,8 @@
         'braintree': bfjs.BraintreeTransaction,
         'generic': bfjs.SpreedlyTransaction,
         'sagepay': bfjs.SagePayTransaction,
-        'payvision': bfjs.PayVisionTransaction
+        'payvision': bfjs.PayVisionTransaction,
+        'gocardless': bfjs.GoCardlessTransaction,
     };
 
     bfjs.lateActors = [
@@ -3249,9 +3360,11 @@
     };
 
     bfjs.captureBankAccount = function(bankAccountDetails, targetGateway, accountID, callback) {
-        if (targetGateway != "stripe") {
+        if (!['stripe', 'goCardless', 'gocardless'].includes(targetGateway)) {
             throw "'" + targetGateway + "' gateway does not support bank accounts";
-        } else {
+        }
+
+        if (targetGateway === 'stripe') {
             // We are masking the stripe ach gateway as a plain stripe one
             targetGateway = "stripeach";
         }
@@ -3463,6 +3576,7 @@
                 case 'generic':
                 case 'sagepay':
                 case 'payvision':
+                case 'gocardless':
                     bfjs.gatewayInstances[resolvedName].loadMe = true;
                     bfjs.core.gatewayChosen = true;
                     break;
