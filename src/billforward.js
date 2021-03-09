@@ -3004,20 +3004,37 @@
             const self = this;
             const details = $.extend({}, self.transaction.state.cardDetails);
 
-            // map keys in cardDetails object to keys in Billforward API payload
-            const mapping = {
-                'holder-name': 'accountHolderName',
-                'account-number': 'accountNumber',
-                'sort-code': 'sortCode',
-                'use-as-default-payment-method': 'defaultPaymentMethod'
-            }
+            let payload = {};
 
-            // build payload
-            const payload = {};
-            for (const key in details) {
-                if (details.hasOwnProperty(key)) {
-                    const translatedKey = mapping[key] ? mapping[key] : key;
-                    payload[translatedKey] = details[key];
+            if (self.transaction.formElementCandidate) {
+                const $form = $(self.transaction.formElementCandidate);
+                const isDefaultFormValue = bfjs.core.getFormValue("use-as-default-payment-method", $form);
+                const isDefaultPayment = typeof isDefaultFormValue === "string" ? isDefaultFormValue !== "false" : !!isDefaultFormValue;
+
+                payload = {
+                    accountID: bfjs.core.getFormValue("account-id", $form),
+                    holderName: bfjs.core.getFormValue("holder-name", $form),
+                    accountNumber: bfjs.core.getFormValue("account-number", $form),
+                    sortCode: bfjs.core.getFormValue("sort-code", $form),
+                    defaultPaymentMethod: isDefaultPayment
+                }
+            } else {
+                // map keys in cardDetails object to keys in Billforward API payload
+                const mapping = {
+                    'email-tokenization-id': 'emailTokenizationID',
+                    'account-id': 'accountID',
+                    'holder-name': 'accountHolderName',
+                    'account-number': 'accountNumber',
+                    'sort-code': 'sortCode',
+                    'use-as-default-payment-method': 'defaultPaymentMethod'
+                }
+
+                // build payload
+                for (const key in details) {
+                    if (details.hasOwnProperty(key)) {
+                        const translatedKey = mapping[key] ? mapping[key] : key;
+                        payload[translatedKey] = details[key];
+                    }
                 }
             }
 
@@ -3345,7 +3362,9 @@
     bfjs.captureBankAccount = function(bankAccountDetails, targetGateway, accountID, callback) {
         if (!['stripe', 'goCardless', 'gocardless'].includes(targetGateway)) {
             throw "'" + targetGateway + "' gateway does not support bank accounts";
-        } else if (targetGateway === 'stripe') {
+        }
+
+        if (targetGateway === 'stripe') {
             // We are masking the stripe ach gateway as a plain stripe one
             targetGateway = "stripeach";
         }

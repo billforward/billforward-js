@@ -25,6 +25,7 @@ Currently supported:
 - `braintree+paypal`
 - `sagepay`
 - `payvision`
+- `gocardless`
 
 # Usage
 
@@ -684,9 +685,32 @@ var callbacks = {
 BillForward.addPayVisionForm(formSelector, supportedCardBrands, wpwlOptions, callbacks);
 ```
 
-### Capture Bank Account
+#### GoCardless
 
-For the moment the only bank account capture supported is with _Stripe_ using `ACH`.
+This captures a UK bank account, passing in the following information:
+- Account holder name
+- Account number
+- Sort code
+
+This is only available to be invoked programmatically.
+
+```js
+bfjs.captureBankAccount(
+  {
+    'holder-name': accountHolderName,
+    'account-number': accountNumber,
+    'sort-code': sortCode,
+    'use-as-default-payment-method': makeDefault
+  },
+  'goCardless',
+  bfAccountId,
+  callbackFunction
+);
+```
+
+### Capture Bank Account with _Stripe_
+
+This is supported with _Stripe_ using `ACH`.
 When capturing a bank account the flow can be divided in two steps:
 
 - Capturing
