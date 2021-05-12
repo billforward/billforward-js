@@ -1010,6 +1010,11 @@
                 payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
+            const cardDetails = this.transaction?.state?.cardDetails;
+            if (cardDetails && cardDetails['email-tokenization-id']) {
+                payload.emailTokenizationID = cardDetails['email-tokenization-id'];
+            }
+
             this.preAuthRequestPayload = payload;
 
             // ready to do pageLoadDo
@@ -3383,11 +3388,15 @@
         return invoke(null, bankAccountDetails, targetGateway, accountID, callback);
     };
 
+    bfjs.setOrgId = function(organizationID) {
+        bfjs.state.api.organizationID = organizationID;
+    }
+
     bfjs.useAPI = function(url, token, organizationID) {
         bfjs.state.api.url = url;
         bfjs.state.api.token = token;
-        bfjs.state.api.organizationID = organizationID;
         bfjs.core.hasBfCredentials = true;
+        bfjs.setOrgId(organizationID);
     };
 
     /**
