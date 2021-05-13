@@ -1010,7 +1010,7 @@
                 payload.organizationID = this.transaction.bfjs.state.api.organizationID;
             }
 
-            const cardDetails = this.transaction?.state?.cardDetails;
+            const cardDetails = ((this.transaction || {}).state || {}).cardDetails;
             if (cardDetails && cardDetails['email-tokenization-id']) {
                 payload.emailTokenizationID = cardDetails['email-tokenization-id'];
             }
