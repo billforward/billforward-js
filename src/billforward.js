@@ -3574,7 +3574,7 @@
     };
 
     bfjs.loadGateways = function(gateways, cardDetails) {
-        for (i = 0; i < gateways.length; i++) {
+        for (var i = 0; i < gateways.length; i++) {
             var gateway = gateways[i];
             var resolvedName = bfjs.resolveGatewayName(gateway, cardDetails);
             switch(gateway.toLowerCase()) {
