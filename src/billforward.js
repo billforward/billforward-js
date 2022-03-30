@@ -71,9 +71,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -97,9 +94,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -122,9 +116,6 @@
             this.depName = "Stripe";
             this.depObj = null;
             this.requireShim = {};
-            // this.requireShim[this.depName] = {
-            //   "exports": "Stripe"
-            // };
             this.useApplePay = false;
             this.applePaySettings = {};
         };
@@ -133,9 +124,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -162,9 +150,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function () {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -192,9 +177,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function () {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -231,9 +213,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -257,9 +236,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -289,9 +265,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -325,9 +298,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -343,16 +313,12 @@
 
     bfjs.GoCardlessGateway = (function() {
         const TheClass = function () {
-            // todo what goes here?
         };
 
         const p = TheClass.prototype = new bfjs.GatewayActor();
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -374,9 +340,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -410,9 +373,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -482,9 +442,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -530,33 +487,7 @@
         };
 
         p.checkIfTransportShimNecessary = function() {
-            // enforce that transport contacts BF using the a protocol matching that with which the page was loaded
-
-            var sameSchemeRegEx = new RegExp('^(\/\/|' + location.protocol + ')', 'i');
-            /*
-             - Behavior: For IE8+, we detect the documentMode value provided by Microsoft.
-             - Behavior: For <IE8, we inject conditional comments until we detect a match.
-             - Results: In IE, the version is returned. In other browsers, false is returned.
-             - Tip: To check for a range of IE versions, use if (!IE || IE < MAX_VERSION)...
-            */
-
-            var IE = (function() {
-                if (document.documentMode) {
-                    return document.documentMode;
-                } else {
-                    for (var i = 7; i > 0; i--) {
-                        var div = document.createElement("div");
-
-                        div.innerHTML = "<!--[if IE " + i + "]><span></span><![endif]-->";
-
-                        if (div.getElementsByTagName("span").length) {
-                            return i;
-                        }
-                    }
-                }
-
-                return undefined;
-            })();
+          //Deprecated method
         };
 
         p.doPreAuth = function(payload) {
@@ -615,8 +546,7 @@
 
         p.jqXHRErrorToBFJSError = function(jqXHR, textStatus, errorThrown, phase) {
             /* Errors:
-            I have starred the errors that I have so far implemented.
-            The rest are proposed.
+            Starred errors have been implemented, the rest are proposed.
 
             The 0th of any group 'x' is a 'generic' catch-all for that group.
 
@@ -819,7 +749,6 @@
                     }
             }
 
-            // TODO: should move this server side
             if(phase && phase == "other") {
                 error.code = 4000;
                 error.message = jqXHR.responseJSON ? jqXHR.responseJSON.errorMessage : json.errorMessage;
@@ -831,14 +760,12 @@
         p.preAuthFailHandler = function(jqXHR, textStatus, errorThrown) {
             var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown, "pre");
 
-            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
             this.ultimateFailure(bfjsError);
         };
 
         p.authCaptureFailHandler = function(jqXHR, textStatus, errorThrown) {
             var bfjsError = this.jqXHRErrorToBFJSError(jqXHR, textStatus, errorThrown, "capture");
 
-            // maybe should only go to ultimate failure if ALL gateways fail to tokenize
             this.ultimateFailure(bfjsError);
         };
 
@@ -869,11 +796,6 @@
         };
 
         p.ultimateFailure = function(reason) {
-            /*if ('undefined' !== typeof this.undisableForm) {
-                this.undisableForm();
-                this.undisableForm = null;
-                this.submitDanceBegun = false;
-            }*/
             if ('undefined' !== typeof this.beforeUltimateFailure) {
                 this.beforeUltimateFailure();
             }
@@ -890,16 +812,12 @@
             _parent.apply(this, arguments);
             this.pageLoadDancer = this.makeDancer();
             this.submitDancer = this.makeDancer();
-            // this.submitDanceBegun = false;
         };
 
         var p = TheClass.prototype = new _parent();
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -930,18 +848,12 @@
         p.doSubmitDanceWhenReady = function() {
             var self = this;
 
-            // if (!this.submitDanceBegun) {
             var deferredTransaction = bfjs.TransactionBase.construct();
             deferredTransaction['do'] = function() {
-                /*if (disableForm) {
-                    disableForm();
-                }
-                this.undisableForm = undisableForm;*/
                 self.startAuthCapture(self.preAuthResponsePayload);
             };
 
             this.submitDancer.doWhenReady(deferredTransaction);
-            // }
         };
 
         return TheClass;
@@ -987,9 +899,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1223,8 +1132,7 @@
                 detailObj: stripeResponse
             };
 
-            // Stripe's error messages are actually very nice
-            // so let's use those
+            // Stripe's error messages are actually very nice so we use those
             // also note that multiple Stripe errors (with differing messages) can share the same code
             // so again: Stripe's message text is required for the full story.
             var stripeError = stripeResponse.error;
@@ -1361,9 +1269,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function () {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1464,9 +1369,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function () {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1603,9 +1505,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -1628,8 +1527,6 @@
             }
 
             this.preAuthRequestPayload = payload;
-
-            //this.doPreAuth(payload);
 
             // ready to do pageLoadDo
             this.pageLoadDancer.loadedCallback();
@@ -1669,9 +1566,6 @@
                     resolvedEnvironment = BraintreeData.environments.sandbox;
             }
             this.resolvedEnvironment = resolvedEnvironment;
-
-            // console.log("env", environment);
-            // console.log("resEnv", resolvedEnvironment);
 
             if (failed) {
                 return this.ultimateFailure({
@@ -1755,28 +1649,6 @@
                         container: paypalDivId,
                         singleUse: false,
                         onPaymentMethodReceived: onPaymentMethodReceived
-                        /*function(obj) {
-                            var $formElement = self.transaction.state.$formElement;
-
-                            var $self = $formElement;
-
-                            var disableForm = function() {
-                                var $set = $self.find('input, textarea, button, select');
-                                $set.prop('disabled',function(setIndex, currentVal) {
-                                    $set.get(setIndex).prop('bf-prior-disable', currentVal);
-                                    return true;
-                                });
-                            };
-
-                            var undisableForm = function() {
-                                var $set = $self.find('input, textarea, button, select');
-                                $set.prop('disabled',function(setIndex, currentVal) {
-                                    return $set.get(setIndex).prop('bf-prior-disable');
-                                });
-                            };
-
-                            self.doSubmitDanceWhenReady(disableForm, undisableForm);
-                        }*/
                     };
 
                     var qualifiedBraintreeInputs = $.extend({}, self.myGateway.braintreeOptionsObj, nominalBraintreeInputs);
@@ -1784,7 +1656,6 @@
                     this.myGateway.depObj.setup(clientToken, "paypal", qualifiedBraintreeInputs);
                     BraintreeData.setup(merchantId, formId, resolvedEnvironment);
                 }
-                //this.myGateway.depObj.setup(clientToken, "custom", {id: formId});
             }
 
             this.submitDancer.loadedCallback();
@@ -1807,7 +1678,6 @@
 
                 nonceValue = nonceSelector.val();
                 if (nonceValue) {
-                    //this.gatewayResponseHandler(null, nonceValue);
                     self.gatewayResponseHandler.call(self, null, nonceValue, deviceDataValue);
                     return;
                 }
@@ -1850,8 +1720,6 @@
                     tokenInfo.billingAddress[TheClass.mappingsProgrammaticBillingAddress[i]] = valueFromForm;
                 }
             }
-
-            // console.log(tokenInfo);
 
             var self = this;
 
@@ -1953,9 +1821,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -2003,56 +1868,6 @@
             }
 
             var tokenInfo = {};
-
-            /*for (var i in TheClass.mappings) {
-                var mapping = TheClass.mappings[i];
-                var valueFromForm;
-                if (this.transaction.state.cardDetails) {
-                    valueFromForm = this.transaction.state.cardDetails[i];
-                } else {
-                    valueFromForm = this.transaction.bfjs.core.getFormValue(i, this.transaction.state.$formElement);
-                }
-
-                if (valueFromForm) {
-                    switch (mapping) {
-                        case 'exp_date':
-                            var parts = valueFromForm.split("/");
-                            var month = parts[0];
-                            var year = parts[1];
-                            tokenInfo['expMonth'] = month;
-                            tokenInfo['expYear'] = year;
-                            break;
-                        case 'name':
-                            var parts = (valueFromForm||"").split(" ");
-                            var firstName;
-                            var lastName;
-                            if (parts.length<2) {
-                                // I guess assume they only provided a first name?
-                                firstName = parts[0];
-                                lastName = "";
-                            } else {
-                                // we'll consider the final word to be the surname; everything else is first name.
-                                firstName = parts.slice(0, -1).join(' ');
-                                lastName = parts.slice(-1).join(' ');
-                            }
-                            tokenInfo['first_name'] = firstName;
-                            tokenInfo['last_name'] = lastName;
-                            break;
-                        case 'first_name':
-                            // if this was already populated by cardholder name split, concede authority
-                            if (tokenInfo['first_name']) break;
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                            break;
-                        case 'last_name':
-                            // if this was already populated by cardholder name split, concede authority
-                            if (tokenInfo['last_name']) break;
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                            break;
-                        default:
-                            tokenInfo[TheClass.mappings[i]] = valueFromForm;
-                    }
-                }
-            }*/
 
             var resolvedValues = (function(mappings) {
                 var map = {};
@@ -2245,9 +2060,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -2285,15 +2097,6 @@
             var payload;
             try {
                 payload = data.results[0];
-                /*if (!payload.VPSProtocol
-                    || !payload.vendor
-                    || !payload.vendorTxCode
-                    || !payload.currency
-                    || !payload.notificationEndpoint
-                    || !payload.environment
-                    ) {
-                    failed = true;
-                }*/
 
                 if (!payload.VPSProtocol
                     || !payload.nextURL
@@ -2320,40 +2123,7 @@
                 });
             }
 
-            // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
-            // var auth = this.transaction.bfjs.state.api.token;
-
-            // var callbackURL = fullURL+"?access_token="+auth;
-            // // var callbackURL = fullURL;
-            // // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
-
-            // var postVars = {
-            //     VPSProtocol: payload.VPSProtocol,
-            //     TxType: "TOKEN",
-            //     Vendor: payload.vendor,
-            //     VendorTxCode: payload.vendorTxCode,
-            //     Currency: payload.currency,
-            //     Profile: "LOW",
-            //     Language: "EN",
-            //     NotificationURL: callbackURL
-            // };
-
-            /*var windowProxy;
-            window.onload=function(){
-                // Create a proxy window to send to and receive
-                // messages from the iFrame
-                windowProxy = new Porthole.WindowProxy(
-                    'http://other-domain.com/proxy.html', 'guestFrame');
-
-                // Register an event handler to receive messages;
-                windowProxy.addEventListener(onMessage);
-            };*/
-
-            // console.log(this.transaction.bfjs.state.api.url);
-
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
-
-            // console.log(bfAPIURLParsed);
 
             var self = this;
 
@@ -2361,9 +2131,6 @@
 
             function handleIFrameResponse(e) {
                 var originalEvent = e.originalEvent;
-                // console.log(originalEvent);
-                // console.log(bfAPIURLParsed);
-                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
                     var $registrationRequester = $("#"+registrationRequesterID);
                     $registrationRequester.remove();
@@ -2385,7 +2152,6 @@
 
             $sagePayFormContainerSelector.append('<iframe id="'+registrationRequesterID+'" src="'+payload.nextURL+'"></iframe>');
             var $registrationRequester = $("#"+registrationRequesterID);
-            // $registrationRequester.hide();
             $registrationRequester.css("border", viewOptions.border);
             $registrationRequester.width(viewOptions.width);
             $registrationRequester.height(viewOptions.height);
@@ -2398,7 +2164,6 @@
                 e.stopPropagation();
                 $registrationRequester.off('load', handleIFrameLoaded);
                 self.myGateway.handleIFrameLoaded();
-                // $registrationRequester.show();
             }
             $registrationRequester.ready(handleIFrameReady);
             $registrationRequester.off('load', handleIFrameLoaded);
@@ -2542,9 +2307,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -2556,15 +2318,9 @@
         })();
 
         p['do'] = function() {
-            // this.VPSProtocol = "3.00";
             var payload = {
                 "@type": "PayVisionPreAuthRequest",
                 "gateway": "Payvision",
-                // "currency": "GBP",
-                // "VPSProtocol": this.VPSProtocol,
-                // "formProfile": "LOW",
-                // "billForwardURL": this.transaction.bfjs.state.api.url,
-                // "billForwardPublicToken": this.transaction.bfjs.state.api.token
             }
 
             if(this.transaction.bfjs.state.api.organizationID != null) {
@@ -2582,15 +2338,6 @@
             var payload;
             try {
                 payload = data.results[0];
-                /*if (!payload.VPSProtocol
-                    || !payload.vendor
-                    || !payload.vendorTxCode
-                    || !payload.currency
-                    || !payload.notificationEndpoint
-                    || !payload.environment
-                    ) {
-                    failed = true;
-                }*/
 
                 if (!payload.checkoutID
                     || !payload.redirectEndpoint
@@ -2611,55 +2358,16 @@
                 });
             }
 
-            // var fullURL = this.transaction.bfjs.state.api.url + payload.notificationEndpoint;
-            // var auth = this.transaction.bfjs.state.api.token;
-
-            // var callbackURL = fullURL+"?access_token="+auth;
-            // // var callbackURL = fullURL;
-            // // var callbackURL = "https://api-sandbox.billforward.net:443/v1/accounts?access_token=ec362f68-03d7-4964-bb6f-2da7ce768ed2";
-
-            // var postVars = {
-            //     VPSProtocol: payload.VPSProtocol,
-            //     TxType: "TOKEN",
-            //     Vendor: payload.vendor,
-            //     VendorTxCode: payload.vendorTxCode,
-            //     Currency: payload.currency,
-            //     Profile: "LOW",
-            //     Language: "EN",
-            //     NotificationURL: callbackURL
-            // };
-
-            /*var windowProxy;
-            window.onload=function(){
-                // Create a proxy window to send to and receive
-                // messages from the iFrame
-                windowProxy = new Porthole.WindowProxy(
-                    'http://other-domain.com/proxy.html', 'guestFrame');
-
-                // Register an event handler to receive messages;
-                windowProxy.addEventListener(onMessage);
-            };*/
-
-            // console.log(this.transaction.bfjs.state.api.url);
-
-            // var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
-
-            // // console.log(bfAPIURLParsed);
-
             var self = this;
 
             var bfAPIURLParsed = this.transaction.bfjs.core.parseURL(this.transaction.bfjs.state.api.url);
 
             var payvisionFormID = "bf-payVisionForm";
-            // var payvisionFormGrandparentID = "bf-payVisionFormGrandparent";
             var payvisionFormParentID = "bf-payVisionFormParent";
             var payvisionIframeID = "bf-payVisionIframe";
 
             function handleIFrameResponse(e) {
                 var originalEvent = e.originalEvent;
-                // console.log(originalEvent);
-                // console.log(bfAPIURLParsed);
-                // console.log(originalEvent.origin, bfAPIURLParsed.origin);
                 if (originalEvent.origin === bfAPIURLParsed.origin) {
                     $(window).off('message', handleIFrameResponse);
                     var $payvisionIframe = $("#"+payvisionIframeID);
@@ -2669,28 +2377,6 @@
             };
             $(window).off('message', handleIFrameResponse);
             $(window).on('message', handleIFrameResponse);
-
-            // function handleIFrameResponse(e) {
-            //     var originalEvent = e.originalEvent;
-            //     // console.log(originalEvent);
-            //     // console.log(bfAPIURLParsed);
-            //     // console.log(originalEvent.origin, bfAPIURLParsed.origin);
-            //     if (originalEvent.origin === bfAPIURLParsed.origin) {
-            //         var $payvisionIframe = $("#"+payvisionIframeID);
-            //         $payvisionIframe.remove();
-            //         self.gatewayResponseHandler.call(self, originalEvent.data);
-            //     }
-            //   };
-            // $(window).off('message', handleIFrameResponse);
-            // $(window).one('message', handleIFrameResponse);
-
-            // var $payvisionFormContainerSelector = $(this.myGateway.payvisionFormContainerSelector);
-
-            // var viewOptions = $.extend({
-            //     width: "450px",
-            //     height: "450px",
-            //     border: "none"
-            // }, this.myGateway.sagePayFormContainerOptions);
 
             var configuredPreferences = this.myGateway;
 
@@ -2724,48 +2410,13 @@
                 }, bespokeOptions);
             }).call(window, $, this.myGateway.wpwlOptions);
 
-            // function nukeForm(formParentID, childToRemove) {
-            //     var element = document.getElementById(formParentID);
-            //     element.parentNode.removeChild(element);
-            // }
-
-            var formContainer;
-
-            // function wpwlOptionsBuilder(payvisionIframeID, nukeForm, formParentID, childToRemove) {
-            //     return {
-            //         paymentTarget: payvisionIframeID,
-            //         shopperResultTarget: payvisionIframeID,
-            //         brandDetection: true,
-            //         style: "plain",
-            //         onAfterSubmit: nukeForm.bind(null, formParentID, childToRemove)
-            //     };
-            // };
-            // var serialize = function(thing) {
-            //     return JSON.stringify(thing, function(key, value) {
-            //       if ('function' === typeof value) {
-            //         return String(value); // implicitly `toString` it
-            //       }
-            //       return value;
-            //     }, "\t");
-            // };
-            //https://acapture.docs.oppwa.com/reference/parameters#testing
-
-            formContainer = $('<div>')
+            var formContainer = $('<div>')
                 .css('display', "inline-block")
                 .attr('id', payvisionFormParentID)
-                // .appendTo($('<div>')
-                //     .css('display', "inline-block")
-                //     .attr('id', payvisionFormGrandparentID)
                 .appendTo(this.myGateway.payvisionFormContainerSelector);
-
-            // $('<script>')
-            //     .attr('type', 'text/javascript')
-            //     .text('var wpwlOptions = ('+wpwlOptionsBuilder+')("'+payvisionIframeID+'", '+nukeForm+', "'+payvisionFormGrandparentID+'", "'+payvisionFormParentID+'");')
-            //     .appendTo(this.myGateway.payvisionFormContainerSelector);
 
             var controller = "tokenization/";
             var endpoint = payload.redirectEndpoint;
-            // var auth = encodeURIComponent("?access_token="+this.transaction.bfjs.state.api.token);
             var nextURL = this.transaction.bfjs.state.api.url + controller + endpoint;
 
             $('<iframe>')
@@ -2778,7 +2429,6 @@
 
             var cardBrands = this.myGateway.supportedCardBrands.join(" ");
 
-            // var $payvisionIframe = $("#"+payvisionIframeID);
             $('<form>')
                 .attr('id', payvisionFormID)
                 .addClass('paymentWidgets')
@@ -2789,30 +2439,6 @@
                 )
                 .text(cardBrands)
                 .css('display', "none");
-
-            // $payvisionFormContainerSelector.append('<form id="'+payvisionFormID+'" class="paymentWidgets" action="'+nextURL+'" target="'+payvisionIframeID+'">'+cardBrands+'</form>');
-            // var $payvisionForm = $("#"+payvisionFormID);
-
-            // // $payvisionIframe.hide();
-            // $payvisionIframe.css("border", viewOptions.border);
-            // $payvisionIframe.width(viewOptions.width);
-            // $payvisionIframe.height(viewOptions.height);
-
-            // function handleIFrameReady() {
-            //     $payvisionIframe.off('ready', handleIFrameReady);
-            //     self.myGateway.handleIFrameReady();
-            // }
-            // function handleIFrameLoaded(e) {
-            //     e.stopPropagation();
-            //     $payvisionIframe.off('load', handleIFrameLoaded);
-            //     self.myGateway.handleIFrameLoaded();
-            //     // $payvisionIframe.show();
-            // }
-            // $payvisionIframe.ready(handleIFrameReady);
-            // $payvisionIframe.off('load', handleIFrameLoaded);
-            // $payvisionIframe.one('load', handleIFrameLoaded);
-
-            // var checkoutID = payload.checkoutID;
 
             var domain = payload.oppwaDomain;
             var version = payload.oppwaPaymentWidgetsVersion;
@@ -2836,9 +2462,6 @@
                 p.constructor = TheClass;
 
                 TheClass.construct = (function() {
-                    // factory pattern for invoking own constructor with arguments
-                    // basically: return new this(arguments)
-
                     function lambda(args) {
                         return TheClass.apply(this, args);
                     }
@@ -2853,7 +2476,6 @@
             })().construct();
 
             var payvisionLoadedCallback = (function payvisionLoadedCallback() {
-                // console.log(arguments);
                 this.myGateway.handleCheckoutWidgetFetchFinish();
                 this.myGateway.handleFormFetchBegin();
             }).bind(this);
@@ -2961,17 +2583,6 @@
             };
 
             return successHandler(parsed);
-
-            /*switch(parsed.status) {
-                case 'OK':
-                    return successHandler(parsed);
-                case 'INVALID':
-                    return invalidHandler(parsed);
-                case 'ERROR':
-                    return errorHandler(parsed);
-                default:
-                    return malformedResponse(parsed);
-            }*/
         };
 
         return TheClass;
@@ -2988,9 +2599,6 @@
         p.constructor = TheClass;
 
         TheClass.construct = (function() {
-            // factory pattern for invoking own constructor with arguments
-            // basically: return new this(arguments)
-
             function lambda(args) {
                 return TheClass.apply(this, args);
             }
@@ -3113,8 +2721,6 @@
                     var paths = {};
                     paths[actor.depName] = actor.depUrlRequire;
 
-                    // console.log(actor);
-
                     require.config({
                         paths: paths,
                         shim: actor.requireShim
@@ -3125,16 +2731,14 @@
                         } else {
                             actor.depObj = dependency;
                         }
-                        // console.log(actor.depObj);
-                        // console.log(actor);
+
                         actor.depObj = dependency;
                         actor.loadedCallback.call(actor);
                     });
                     // don't consult window for dependency, and don't tag load it
                     return true;
                 } else {
-                    // define but no require?
-                    // we're gonna have trouble I know it :(
+                    // define but no require so we can't load correctly
                     throw new Error("No implementation of require() found to await module-loaded dependency: braintree.js");
                 }
             }
@@ -3207,7 +2811,6 @@
 
         var script = document.createElement("script")
         script.type = "text/javascript";
-        // script.async = true;
 
         var doCallback = function() {
             callback.call(actor);
@@ -3321,8 +2924,6 @@
     };
 
     bfjs.stripeVerifySetupIntent = function (paymentMethodId, callback) {
-        console.log(bfjs.state.stripe);
-
         var payload = {};
 
         var fullURL = bfjs.state.api.url + "payment-methods/" + paymentMethodId + "/verify/stripe-setup-intent";
@@ -3513,7 +3114,6 @@
          - Behavior: For IE8+, we detect the documentMode value provided by Microsoft.
          - Behavior: For <IE8, we inject conditional comments until we detect a match.
          - Results: In IE, the version is returned. In other browsers, false is returned.
-         - Tip: To check for a range of IE versions, use if (!IE || IE < MAX_VERSION)...
         */
 
         var IE = (function() {
