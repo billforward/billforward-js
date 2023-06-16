@@ -772,7 +772,7 @@
                                 break;
                             case 'TokenizationAuthCaptureFailure':
                                 error.code = 4002;
-                                error.message = "BillForward server encountered a known error during authorized card capture.";
+                                error.message = "The server encountered an error during authorized card capture.";
                                 error.detailObj = {
                                     'message': json.errorMessage
                                 };
@@ -781,7 +781,7 @@
                             default:
                                 if (jqXHR.status === 500) {
                                     error.code = 4001;
-                                    error.message = "BillForward server encountered unhandled error during authorized card capture.";
+                                    error.message = "The server encountered unhandled error during authorized card capture.";
                                 }
                                 if (json.errorMessage.indexOf('declined') != -1) {
                                     error.code = 4100;
@@ -806,16 +806,16 @@
                     error.message = "Your BillForward token is invalid.";
                     if (json.errorMessage.indexOf('expired') != -1) {
                         error.code = 1211;
-                        error.message = "Your BillForward token has expired.";
+                        error.message = "Your token has expired.";
                     }
                     break;
                 default:
                     error.code = 1000;
-                    error.message = "Failed to connect to BillForward.";
+                    error.message = "Failed to connect to the processing system.";
 
                     if (jqXHR.readyState === 0) {
                         error.code = 1100;
-                        error.message = "Failed to connect to BillForward.";
+                        error.message = "Failed to connect to the processing system.";
                     }
             }
 
@@ -2497,7 +2497,7 @@
             var errorHandler = function(data) {
                 var bfjsError = {
                     code: 5020,
-                    message: "Card capture to SagePay failed; error occurred in BillForward server during token verification.",
+                    message: "Card capture to SagePay failed; error occurred in the processing server during token verification.",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
@@ -2954,7 +2954,7 @@
             var errorHandler = function(data) {
                 var bfjsError = {
                     code: 5020,
-                    message: "Card capture to PayVision failed; error occurred in BillForward server during token verification.",
+                    message: "Card capture to PayVision failed; error occurred in the processing server during token verification.",
                     detailObj: data
                 };
                 return self.ultimateFailure(bfjsError);
